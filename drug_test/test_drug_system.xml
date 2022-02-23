@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<System openmmVersion="7.7" type="System" version="1">
+	<PeriodicBoxVectors>
+		<A x="15" y="0" z="0"/>
+		<B x="0" y="15" z="0"/>
+		<C x="0" y="0" z="150"/>
+	</PeriodicBoxVectors>
+	<Particles>
+		<Particle mass="1"/>
+	</Particles>
+	<Constraints/>
+	<Forces/>
+</System>
