@@ -10,7 +10,15 @@ import os
 import time
 
 
+# TODO: Make it so that the added particles dont collide with the residues after
+# being placed.
+
+# TODO: Make the system bivalent
+
+# TODO:
+
 # TODO: Add Charge
+
 
 def add_drugs(
     system: openmm.openmm.System,
@@ -85,7 +93,7 @@ def add_drugs(
 
     
 
-    # It seems that I need a topology for the small molecules
+    # I need a topology for the small molecules
     # in order to be able to merge both trajectories.
 
     drug_top = md.Topology()
@@ -93,7 +101,7 @@ def add_drugs(
     drug_top.add_residue('TEST', drug_chain)
     resid = drug_top.residue(0)
     for m_ind, molec in enumerate(coor_arr):
-        drug_top.add_atom(f"A{m_ind}", None, resid)
+        drug_top.add_atom(f"SMD", None, resid)
 
     drug_traj = md.Trajectory(coor_arr, drug_top)
     traj = traj.stack(drug_traj)
@@ -101,14 +109,14 @@ def add_drugs(
     # TODO: This returns a slab with the small molecules on it,
     # but won't run the simulation.
 
-    traj.save('test_geom.xyz')
+    traj.save('test_smalldrug_geom.xyz')
 
     return traj
 
 
 def gen_monovalent(L_x, L_y, L_z, num_part):
-    x_coords = (L_x - 0) * np.random.ranf(int(num_part)) + 0
-    y_coords = (L_y - 0) * np.random.ranf(int(num_part)) + 0
+    x_coords = (L_x/2 - (-L_x/2)) * np.random.ranf(int(num_part)) + (-L_x/2)
+    y_coords = (L_y/2 - (-L_y/2)) * np.random.ranf(int(num_part)) + (-L_y/2)
     z_coords = (L_z - 0) * np.random.ranf(int(num_part)) + 0
     coor_arr = np.vstack((x_coords, y_coords, z_coords)).T
     return coor_arr
