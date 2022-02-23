@@ -137,7 +137,8 @@ def simulate(residues, name, prot, temp):
         conc=0.005,
         mass=1,
         dist_threshold=2,
-        monovalent=True,
+        drug_components=2
+        
     )
 
     print(in_traj.xyz.shape)

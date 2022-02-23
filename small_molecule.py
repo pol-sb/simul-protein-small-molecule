@@ -15,7 +15,7 @@ import time
 
 # TODO: Make the system bivalent
 
-# TODO:
+# TODO: Use avogadro number for particle collocation!!
 
 # TODO: Add Charge
 
@@ -26,7 +26,8 @@ def add_drugs(
     conc: float,
     mass: float,
     dist_threshold: float,
-    monovalent: bool,
+    drug_components: int,
+    components_distance=0.5,
 ):
     # Decide how many particles to place by using the concentration.
     sim_box_data = system.getDefaultPeriodicBoxVectors()
@@ -50,12 +51,12 @@ def add_drugs(
     print("tot_mass: ", tot_mass)
     print("num_part: ", num_part)
 
-
     # Generating random coordinates array with the small particle random
     # coordinates
-    if monovalent:
-        coor_arr = gen_monovalent(len_x, len_y, len_z, num_part)
+    # if drug_components == 1:
     
+    coor_arr = gen_monovalent(len_x, len_y, len_z, num_part)
+       
 
     print(f"\n{num_part} small molec. generated. Computing collisions...")
 
@@ -65,9 +66,7 @@ def add_drugs(
     # it again.
     # np.linalg.norm(b-a) -> distance
 
-    #######
     # TODO: Optimize this block
-    #
     t1 = time.time()
     changes = 0
     for aa_ind, aa_cord in enumerate(traj.xyz[0]):
@@ -85,21 +84,27 @@ def add_drugs(
 
     t2 = time.time()
     print(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
-    #
     #######
+
+    coor_arr = add_polyvalent(
+        coor_arr,
+        drug_components,
+        components_distance,
+    )
 
     for part in range(num_part):
         system.addParticle(mass)
-
-    
 
     # I need a topology for the small molecules
     # in order to be able to merge both trajectories.
 
     drug_top = md.Topology()
     drug_chain = drug_top.add_chain()
-    drug_top.add_residue('TEST', drug_chain)
+    drug_top.add_residue("TEST", drug_chain)
     resid = drug_top.residue(0)
+
+    # TODO: I thinks this loop is the one that should be used for adding the
+    # bonds to the topology file! 
     for m_ind, molec in enumerate(coor_arr):
         drug_top.add_atom(f"SMD", None, resid)
 
@@ -109,17 +114,45 @@ def add_drugs(
     # TODO: This returns a slab with the small molecules on it,
     # but won't run the simulation.
 
-    traj.save('test_smalldrug_geom.xyz')
+    traj.save("test_smalldrug_geom.xyz")
 
     return traj
 
 
 def gen_monovalent(L_x, L_y, L_z, num_part):
-    x_coords = (L_x/2 - (-L_x/2)) * np.random.ranf(int(num_part)) + (-L_x/2)
-    y_coords = (L_y/2 - (-L_y/2)) * np.random.ranf(int(num_part)) + (-L_y/2)
+    x_coords = (L_x / 2 - (-L_x / 2)) * np.random.ranf(int(num_part)) + (
+        -L_x / 2
+    )
+    y_coords = (L_y / 2 - (-L_y / 2)) * np.random.ranf(int(num_part)) + (
+        -L_y / 2
+    )
     z_coords = (L_z - 0) * np.random.ranf(int(num_part)) + 0
     coor_arr = np.vstack((x_coords, y_coords, z_coords)).T
     return coor_arr
+
+
+def add_polyvalent(coor_arr, num_comp, distance):
+
+
+    x_coords = coor_arr[:, 0]
+    y_coords = coor_arr[:, 1]
+    z_coords = coor_arr[:, 2]
+
+    # TODO: This adds the new second molecule of the bivalent compound at the 
+    # end of the coord array. Would this work for molecules with more than two
+    # components?
+
+    for comp in range(1, num_comp):
+        new_xcoord = x_coords + distance
+        new_ycoord = y_coords
+        new_zcoord = z_coords
+
+    new_coor_arr = np.vstack((new_xcoord, new_ycoord, new_zcoord)).T
+    
+    final_arr = np.vstack((coor_arr, new_coor_arr))
+    
+    return final_arr
+
 
 if __name__ == "__main__":
 
