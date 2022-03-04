@@ -129,11 +129,13 @@ def simulate(residues, name, prot, temp):
         system.addParticle((residues.loc[prot.fasta[-1]].MW + 16) * unit.amu)
 
     print(in_traj.xyz.shape)
+    print(top)
 
     # My function to add small particles to the system
-    in_traj = smol.add_drugs(
+    in_traj, top = smol.add_drugs(
         system=system,
-        traj=in_traj,
+        in_traj=in_traj,
+        in_top=top,
         conc=0.005,
         mass=1,
         dist_threshold=2,
@@ -142,6 +144,7 @@ def simulate(residues, name, prot, temp):
     )
 
     print(in_traj.xyz.shape)
+    print(top)
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
