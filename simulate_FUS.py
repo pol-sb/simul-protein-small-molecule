@@ -23,9 +23,9 @@ def simulate(residues, name, prot, temp):
 
     # Generates the parameters for the Debye-Huckel long range interaction,
     # normally called Yukawa,  which includes an exponential term for ion
-    # computed using values in the .csv file by employing the genParamsLJ 
+    # computed using values in the .csv file by employing the genParamsLJ
     # function.
-    # This returns the epsilon (of 1/4*pi*eps) and the kappa for the 
+    # This returns the epsilon (of 1/4*pi*eps) and the kappa for the
     # exponential term.
     yukawa_eps, yukawa_kappa = genParamsDH(residues, name, prot, temp)
 
@@ -139,8 +139,7 @@ def simulate(residues, name, prot, temp):
         conc=0.005,
         mass=1,
         dist_threshold=2,
-        drug_components=2
-        
+        drug_components=2,
     )
 
     print(in_traj.xyz.shape)
@@ -168,13 +167,13 @@ def simulate(residues, name, prot, temp):
         energy_expression + "; s=0.5*(s1+s2); l=0.5*(l1+l2)"
     )
 
-    # Adding our custom energy expression for a Yukawa type interaction to use 
+    # Adding our custom energy expression for a Yukawa type interaction to use
     # in the FF. It is also non bonded.
     yu = openmm.openmm.CustomNonbondedForce(
         "q*(exp(-kappa*r)/r - exp(-kappa*4)/4); q=q1*q2"
     )
 
-    # Adding our parameters to the FF 
+    # Adding our parameters to the FF
     yu.addGlobalParameter("kappa", yukawa_kappa / unit.nanometer)
     yu.addPerParticleParameter("q")
 
