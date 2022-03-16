@@ -235,6 +235,7 @@ def simulate(residues, name, prot, temp):
     check_point = name + "/{:d}/restart.chk".format(temp)
 
     if os.path.isfile(check_point):
+        print("\nResuming simulation from checkpoint file\n")
         simulation.loadCheckpoint(check_point)
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
@@ -270,7 +271,7 @@ def simulate(residues, name, prot, temp):
     simulation.runForClockTime(
         20 * unit.hour,
         checkpointFile=check_point,
-        checkpointInterval=5 * unit.hour,
+        checkpointInterval=1 * unit.hour,
     )
 
     # Saves checkpoint file
@@ -285,4 +286,4 @@ proteins = pd.read_pickle("proteins.pkl")
 print(args.name, args.temp)
 t0 = time.time()
 simulate(residues, args.name, proteins.loc[args.name], args.temp)
-print("Timing {:.3f}".format(time.time() - t0))
+print("Simulation Done. Total time: {:.3f}".format(time.time() - t0))
