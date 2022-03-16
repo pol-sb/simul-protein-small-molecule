@@ -138,7 +138,7 @@ def simulate(residues, name, prot, temp):
     if not os.path.isfile(check_point):
         print("\nAdding small molecules to the system...")
         # My function to add small particles to the system
-        in_traj, top = smol.add_drugs(
+        in_traj, top, system = smol.add_drugs(
             system=system,
             in_traj=in_traj,
             in_top=top,
@@ -159,6 +159,8 @@ def simulate(residues, name, prot, temp):
 
         # print(in_traj.xyz.shape)
         # print(top)
+
+    pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
@@ -261,7 +263,7 @@ def simulate(residues, name, prot, temp):
             )
         )
     else:
-        simulation.context.setPositions(in_traj.xyz)
+        simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(

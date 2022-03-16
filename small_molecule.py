@@ -48,6 +48,9 @@ def add_drugs(
     tot_mass = conc * sim_box_vol
     num_part = int(tot_mass / mass)
 
+    for part in num_part:
+        system.addParticle(12 * unit.amu)
+
     # Generating random coordinates array with the small particle random
     # coordinates
     # if drug_components == 1:
@@ -79,7 +82,7 @@ def add_drugs(
     top_ats.to_csv(directory + "sm_drg_ats.csv")
     np.save(directory + "sm_drg_bnd.npy", top_bnd)
 
-    return traj, top
+    return traj, top, system
 
 
 class CGdrug:
