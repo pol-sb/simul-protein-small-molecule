@@ -48,7 +48,6 @@ def add_drugs(
     tot_mass = conc * sim_box_vol
     num_part = int(tot_mass / mass)
 
-
     # Generating random coordinates array with the small particle random
     # coordinates
     # if drug_components == 1:
@@ -70,12 +69,15 @@ def add_drugs(
 
     # Saving the Trajectory and Topology so it can be loaded later,
     # for example, if the calculation is stopped and then resumed.
-    traj.save_pdb(directory+"sm_drg_traj.pdb")
+    print(
+        f"Saving small molecule trajectories and topologies in:\n'{directory}'"
+    )
+    traj.save_pdb(directory + "sm_drg_traj.pdb")
     top_df = top.to_dataframe()
     top_ats = top_df[0]
     top_bnd = top_df[1]
-    top_ats.to_csv(directory+"sm_drg_ats.csv")
-    np.save(directory+"sm_drg_bnd.npy", top_bnd)
+    top_ats.to_csv(directory + "sm_drg_ats.csv")
+    np.save(directory + "sm_drg_bnd.npy", top_bnd)
 
     return traj, top
 
