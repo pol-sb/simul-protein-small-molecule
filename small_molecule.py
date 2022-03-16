@@ -1,5 +1,6 @@
 import numpy as np
 import openmm
+import pandas as pd
 import pprint as pp
 import openmm.unit as unit
 import openmm.app as app
@@ -25,6 +26,7 @@ def add_drugs(
     mass: float,
     dist_threshold: float,
     drug_components: int,
+    directory: str,
     components_distance=0.5,
 ):
     # Decide how many particles to place by using the concentration.
@@ -65,6 +67,10 @@ def add_drugs(
 
     traj = drugs.get_trajectory()
     top = drugs.get_topology()
+
+    traj.save_pdb(directory+"sm_drg_traj.pdb")
+    top_df = top.to_dataframe()
+    top_df.data_to_csv(directory+"sm_drg_top.csv")
 
     return traj, top
 

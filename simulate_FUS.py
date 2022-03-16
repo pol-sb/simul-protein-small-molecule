@@ -16,7 +16,8 @@ args = parser.parse_args()
 
 def simulate(residues, name, prot, temp):
 
-    check_point = name + "/{:d}/restart.chk".format(temp)
+    folder = name + "/{:d}/".format(temp)
+    check_point = folder + "restart.chk"
 
     residues = residues.set_index("one")
 
@@ -145,7 +146,13 @@ def simulate(residues, name, prot, temp):
             mass=1,
             dist_threshold=2,
             drug_components=2,
+            directory=folder,
         )
+
+    else:
+        pdb = app.PDBFile(folder + "sm_drg_traj.pdb")
+        top = pdb.topology
+        in_traj = md.load(folder + "sm_drg_traj.pdb")
 
         # print(in_traj.xyz.shape)
         # print(top)
