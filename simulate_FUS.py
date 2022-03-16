@@ -261,7 +261,7 @@ def simulate(residues, name, prot, temp):
             )
         )
     else:
-        simulation.context.setPositions(in_traj.openmm_positions)
+        simulation.context.setPositions(in_traj.xyz)
         simulation.minimizeEnergy()
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
