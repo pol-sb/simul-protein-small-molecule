@@ -139,7 +139,6 @@ def simulate(residues, name, prot, temp):
         print("hola", part)
         quit()
 
-
     if not os.path.isfile(check_point):
         print("\nAdding small molecules to the system...")
         # My function to add small particles to the system
@@ -164,11 +163,6 @@ def simulate(residues, name, prot, temp):
 
         # print(in_traj.xyz.shape)
         # print(top)
-
-
-    
-
-
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
@@ -251,10 +245,13 @@ def simulate(residues, name, prot, temp):
     )  # 322
 
     # Uses CUDA as the platform for the GPU calculations.
-    platform = openmm.Platform.getPlatformByName("CUDA")
+    platform = openmm.Platform.getPlatformByName("CPU")
 
     simulation = app.simulation.Simulation(
-        top, system, integrator, platform, dict(CudaPrecision="mixed")
+        top,
+        system,
+        integrator,
+        platform,
     )
 
     if os.path.isfile(check_point):
@@ -263,16 +260,16 @@ def simulate(residues, name, prot, temp):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + "/{:d}/{:s}.dcd".format(temp, name),
-                int(5e4),
+                int(10),
                 append=True,
             )
         )
     else:
-        simulation.context.setPositions(pdb.positions)
+        simulation.context.setPositions(in_traj.openmm_positions)
         simulation.minimizeEnergy()
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
-                name + "/{:d}/{:s}.dcd".format(temp, name), int(5e4)
+                name + "/{:d}/{:s}.dcd".format(temp, name), int(10)
             )
         )
 
@@ -280,7 +277,7 @@ def simulate(residues, name, prot, temp):
     simulation.reporters.append(
         app.statedatareporter.StateDataReporter(
             "{:s}_{:d}.log".format(name, temp),
-            100000,
+            10,
             potentialEnergy=True,
             temperature=True,
             step=True,
@@ -292,9 +289,9 @@ def simulate(residues, name, prot, temp):
 
     # TODO: Defines total runtime (20h) and checkpoint save interval (5h)?
     simulation.runForClockTime(
-        20 * unit.hour,
+        2 * unit.minute,
         checkpointFile=check_point,
-        checkpointInterval=1 * unit.hour,
+        checkpointInterval=30 * unit.second,
     )
 
     # Saves checkpoint file
