@@ -292,7 +292,12 @@ def simulate(residues, name, prot, temp):
 
     # TODO: What is this.
     # genDCD(residues, name, prot, temp, n_chains)
-    simulation.saveState(folder+"system_final.xml")
+    positions = simulation.context.getState(getPositions=True).getPositions()
+    app.PDBFile.writeFile(
+        simulation.topology,
+        positions,
+        open(f"{folder}final_system_state.pdb", "w"),
+    )
 
 
 residues = pd.read_csv("residues.csv").set_index("three", drop=False)
