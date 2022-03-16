@@ -135,6 +135,11 @@ def simulate(residues, name, prot, temp):
     print(in_traj.xyz.shape)
     print(top)
 
+    for part in top.atoms:
+        print("hola", part)
+        quit()
+
+
     if not os.path.isfile(check_point):
         print("\nAdding small molecules to the system...")
         # My function to add small particles to the system
@@ -159,6 +164,11 @@ def simulate(residues, name, prot, temp):
 
         # print(in_traj.xyz.shape)
         # print(top)
+
+
+    
+
+
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
@@ -244,7 +254,7 @@ def simulate(residues, name, prot, temp):
     platform = openmm.Platform.getPlatformByName("CUDA")
 
     simulation = app.simulation.Simulation(
-        pdb.topology, system, integrator, platform, dict(CudaPrecision="mixed")
+        top, system, integrator, platform, dict(CudaPrecision="mixed")
     )
 
     if os.path.isfile(check_point):
