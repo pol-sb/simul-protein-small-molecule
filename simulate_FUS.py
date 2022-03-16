@@ -15,6 +15,9 @@ args = parser.parse_args()
 
 
 def simulate(residues, name, prot, temp):
+
+    check_point = name + "/{:d}/restart.chk".format(temp)
+
     residues = residues.set_index("one")
 
     # Generates the parameters for the LJ interaction using values in the
@@ -131,19 +134,21 @@ def simulate(residues, name, prot, temp):
     print(in_traj.xyz.shape)
     print(top)
 
-    # My function to add small particles to the system
-    in_traj, top = smol.add_drugs(
-        system=system,
-        in_traj=in_traj,
-        in_top=top,
-        conc=0.005,
-        mass=1,
-        dist_threshold=2,
-        drug_components=2,
-    )
+    if not os.path.isfile(check_point):
 
-    print(in_traj.xyz.shape)
-    print(top)
+        # My function to add small particles to the system
+        in_traj, top = smol.add_drugs(
+            system=system,
+            in_traj=in_traj,
+            in_top=top,
+            conc=0.005,
+            mass=1,
+            dist_threshold=2,
+            drug_components=2,
+        )
+
+        # print(in_traj.xyz.shape)
+        # print(top)
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
@@ -231,8 +236,6 @@ def simulate(residues, name, prot, temp):
     simulation = app.simulation.Simulation(
         pdb.topology, system, integrator, platform, dict(CudaPrecision="mixed")
     )
-
-    check_point = name + "/{:d}/restart.chk".format(temp)
 
     if os.path.isfile(check_point):
         print("\nResuming simulation from checkpoint file\n")
