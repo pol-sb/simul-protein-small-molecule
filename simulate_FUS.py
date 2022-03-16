@@ -291,7 +291,8 @@ def simulate(residues, name, prot, temp):
     simulation.saveCheckpoint(check_point)
 
     # TODO: What is this.
-    genDCD(residues, name, prot, temp, n_chains)
+    # genDCD(residues, name, prot, temp, n_chains)
+    simulation.saveState(folder+"system_final.xml")
 
 
 residues = pd.read_csv("residues.csv").set_index("three", drop=False)

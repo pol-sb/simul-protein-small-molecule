@@ -70,7 +70,7 @@ def add_drugs(
     # Saving the Trajectory and Topology so it can be loaded later,
     # for example, if the calculation is stopped and then resumed.
     print(
-        f"Saving small molecule trajectories and topologies in:\n'{directory}'"
+        f"\nSaving small molecule trajectories and topologies in:\n'{directory}'"
     )
     traj.save_pdb(directory + "sm_drg_traj.pdb")
     top_df = top.to_dataframe()
