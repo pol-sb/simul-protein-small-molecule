@@ -135,10 +135,6 @@ def simulate(residues, name, prot, temp):
     print(in_traj.xyz.shape)
     print(top)
 
-    for part in top.atoms:
-        print("hola", part)
-        quit()
-
     if not os.path.isfile(check_point):
         print("\nAdding small molecules to the system...")
         # My function to add small particles to the system
