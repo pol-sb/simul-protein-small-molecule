@@ -136,7 +136,7 @@ def simulate(residues, name, prot, temp):
     print(top)
 
     if not os.path.isfile(check_point):
-        print("\nAdding small molecules to the system.")
+        print("\nAdding small molecules to the system...")
         # My function to add small particles to the system
         in_traj, top = smol.add_drugs(
             system=system,

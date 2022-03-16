@@ -74,7 +74,7 @@ def add_drugs(
     top_df = top.to_dataframe()
     top_ats = top_df[0]
     top_bnd = top_df[1]
-    top_ats.data_to_csv(directory+"sm_drg_ats.csv")
+    top_ats.to_csv(directory+"sm_drg_ats.csv")
     np.save(directory+"sm_drg_bnd.npy", top_bnd)
 
     return traj, top
