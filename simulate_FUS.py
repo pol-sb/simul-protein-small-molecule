@@ -136,7 +136,7 @@ def simulate(residues, name, prot, temp):
     print(top)
 
     if not os.path.isfile(check_point):
-
+        print("\nAdding small molecules to the system.")
         # My function to add small particles to the system
         in_traj, top = smol.add_drugs(
             system=system,
@@ -150,8 +150,11 @@ def simulate(residues, name, prot, temp):
         )
 
     else:
-        pdb = app.PDBFile(folder + "sm_drg_traj.pdb")
-        top = pdb.topology
+        print("\nReading small molecules from stored files...")
+        top_ats = pd.read_csv(folder + "sm_drg_ats.csv")
+        top_bnd = np.load(folder + "sm_drg_bnd.npy")
+        top = md.Topology.from_dataframe(top_ats, top_bnd)
+
         in_traj = md.load(folder + "sm_drg_traj.pdb")
 
         # print(in_traj.xyz.shape)

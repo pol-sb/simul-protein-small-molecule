@@ -68,45 +68,16 @@ def add_drugs(
     traj = drugs.get_trajectory()
     top = drugs.get_topology()
 
+    # Saving the Trajectory and Topology so it can be loaded later,
+    # for example, if the calculation is stopped and then resumed.
     traj.save_pdb(directory+"sm_drg_traj.pdb")
     top_df = top.to_dataframe()
-    top_df.data_to_csv(directory+"sm_drg_top.csv")
+    top_ats = top_df[0]
+    top_bnd = top_df[1]
+    top_ats.data_to_csv(directory+"sm_drg_ats.csv")
+    np.save(directory+"sm_drg_bnd.npy", top_bnd)
 
     return traj, top
-
-
-# def gen_monovalent(L_x, L_y, L_z, num_part):
-#     x_coords = (L_x / 2 - (-L_x / 2)) * np.random.ranf(int(num_part)) + (
-#         -L_x / 2
-#     )
-#     y_coords = (L_y / 2 - (-L_y / 2)) * np.random.ranf(int(num_part)) + (
-#         -L_y / 2
-#     )
-#     z_coords = (L_z - 0) * np.random.ranf(int(num_part)) + 0
-#     coor_arr = np.vstack((x_coords, y_coords, z_coords)).T
-#     return coor_arr
-
-
-# def add_polyvalent(coor_arr, num_comp, distance):
-
-#     x_coords = coor_arr[:, 0]
-#     y_coords = coor_arr[:, 1]
-#     z_coords = coor_arr[:, 2]
-
-#     # TODO: This adds the new second molecule of the bivalent compound at the
-#     # end of the coord array. Would this work for molecules with more than two
-#     # components?
-
-#     for comp in range(1, num_comp):
-#         new_xcoord = x_coords + distance
-#         new_ycoord = y_coords
-#         new_zcoord = z_coords
-
-#     new_coor_arr = np.vstack((new_xcoord, new_ycoord, new_zcoord)).T
-
-#     final_arr = np.vstack((coor_arr, new_coor_arr))
-
-#     return final_arr
 
 
 class CGdrug:
@@ -246,8 +217,6 @@ class CGdrug:
             unitcell_lengths=[self.Lx, self.Ly, self.Lz],
             unitcell_angles=[90.0, 90.0, 90.0],
         )
-
-        self.trajectory.save_pdb("traj_test2.pdb")
 
     def add_charge(self, charge, comp_index):
         for drug in self.description.values():
