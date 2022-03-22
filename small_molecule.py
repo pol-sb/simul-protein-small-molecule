@@ -48,7 +48,7 @@ def add_drugs(
     tot_mass = conc * sim_box_vol
     num_part = int(tot_mass / mass)
 
-    for part in num_part:
+    for part in range(num_part):
         system.addParticle(12 * unit.amu)
 
     # Generating random coordinates array with the small particle random

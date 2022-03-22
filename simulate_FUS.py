@@ -160,6 +160,10 @@ def simulate(residues, name, prot, temp):
         # print(in_traj.xyz.shape)
         # print(top)
 
+    print(in_traj.xyz.shape)
+    print(top)
+    print(system)
+
     pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
 
     #######
@@ -198,7 +202,7 @@ def simulate(residues, name, prot, temp):
     ah.addPerParticleParameter("s")
     ah.addPerParticleParameter("l")
 
-    for j in range(n_chains):
+    for j in range(n_chains + 1):
         begin = j * N
         end = j * N + N
 
@@ -243,13 +247,14 @@ def simulate(residues, name, prot, temp):
     )  # 322
 
     # Uses CUDA as the platform for the GPU calculations.
-    platform = openmm.Platform.getPlatformByName("CPU")
+    platform = openmm.Platform.getPlatformByName("CUDA")
 
     simulation = app.simulation.Simulation(
         top,
         system,
         integrator,
         platform,
+        dict(CudaPrecision="mixed")
     )
 
     if os.path.isfile(check_point):
