@@ -138,7 +138,7 @@ def simulate(residues, name, prot, temp):
     if not os.path.isfile(check_point):
         print("\nAdding small molecules to the system...")
         # My function to add small particles to the system
-        in_traj, top, system = smol.add_drugs(
+        in_traj, top, system, n_drugs = smol.add_drugs(
             system=system,
             in_traj=in_traj,
             in_top=top,
@@ -160,7 +160,11 @@ def simulate(residues, name, prot, temp):
         # print(in_traj.xyz.shape)
         # print(top)
 
+    # TODO: This is giving me a problem, the number of particles in the pdb
+    # is 16636 (larger than 16468 which is init system + drugs) and results in
+    # an error.
     pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
+    print("len pdb: ", pdb.getTopology().getNumAtoms())
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
@@ -170,7 +174,7 @@ def simulate(residues, name, prot, temp):
     # charge, but this should be able to be changed. We will do bivalent
     # compounds with charge eventually.
     #
-    # How many particles will be set with the concentration, that MUST be able
+    # How many particles will be set with the concentration MUST be able
     # to be changed to make several tests.
     #######
 
@@ -178,7 +182,8 @@ def simulate(residues, name, prot, temp):
     hb = openmm.openmm.HarmonicBondForce()
 
     # Adding our custom energy expression for a LJ type interaction to use in
-    # the FF. It is non bonded as LJ is not bonded
+    # the FF. It is non bonded as LJ is not bonded. Ashbaugh-Hatch (ah)
+    # functional form.
     energy_expression = "select(step(r-2^(1/6)*s),4*eps*l*((s/r)^12-(s/r)^6),4*eps*((s/r)^12-(s/r)^6)+eps*(1-l))"
     ah = openmm.openmm.CustomNonbondedForce(
         energy_expression + "; s=0.5*(s1+s2); l=0.5*(l1+l2)"
@@ -197,6 +202,9 @@ def simulate(residues, name, prot, temp):
     ah.addGlobalParameter("eps", lj_eps * unit.kilojoules_per_mole)
     ah.addPerParticleParameter("s")
     ah.addPerParticleParameter("l")
+
+    print("Number of particles:", system.getNumParticles())
+    print("Number of drugs:", n_drugs)
 
     for j in range(n_chains):
         begin = j * N
@@ -218,9 +226,30 @@ def simulate(residues, name, prot, temp):
                 0.38 * unit.nanometer,
                 8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
             )
+
             # Important
             yu.addExclusion(i, i + 1)
             ah.addExclusion(i, i + 1)
+
+    # Adding the small drug particles to the CustomNonbondedForce used in
+    # # the system. n_drugs (number of small molecules) by 2 (bimolecular).
+    for i in range(n_drugs * 2):
+
+        # Yukawa Epsilon of the small molecules
+        yu.addParticle([1 * unit.nanometer * unit.kilojoules_per_mole])
+        ah.addParticle(
+            [
+                # Sigma of the small molecules.
+                1 * unit.nanometer,
+                # Lambda of the small molecules.
+                1 * unit.dimensionless,
+            ]
+        )
+
+    # TODO: I will have to add bonds to my particles!! AAAA
+
+    print("ah:", ah.getNumParticles())
+    print("yu:", yu.getNumParticles())
 
     yu.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
     ah.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
@@ -246,7 +275,7 @@ def simulate(residues, name, prot, temp):
     platform = openmm.Platform.getPlatformByName("CPU")
 
     simulation = app.simulation.Simulation(
-        top,
+        pdb.topology,
         system,
         integrator,
         platform,

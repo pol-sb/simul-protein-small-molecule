@@ -1,12 +1,12 @@
-import numpy as np
-import openmm
-import pandas as pd
 import pprint as pp
-import openmm.unit as unit
-import openmm.app as app
-import mdtraj as md
 import time
 
+import mdtraj as md
+import numpy as np
+import openmm
+import openmm.app as app
+import openmm.unit as unit
+import pandas as pd
 
 # TODO: Make it so that the added particles dont collide with the residues after
 # being placed.
@@ -48,9 +48,10 @@ def add_drugs(
     tot_mass = conc * sim_box_vol
     num_part = int(tot_mass / mass)
 
-    for part in num_part:
+    for part in range(num_part*2):
         system.addParticle(12 * unit.amu)
 
+    print("system num parts in module:",system.getNumParticles())
     # Generating random coordinates array with the small particle random
     # coordinates
     # if drug_components == 1:
@@ -82,7 +83,7 @@ def add_drugs(
     top_ats.to_csv(directory + "sm_drg_ats.csv")
     np.save(directory + "sm_drg_bnd.npy", top_bnd)
 
-    return traj, top, system
+    return traj, top, system, num_part
 
 
 class CGdrug:
@@ -126,30 +127,7 @@ class CGdrug:
 
         return centers
 
-    def _add_components(self, centers, n_comp, distance, dist_threshold):
-
-        # For now n_comp HAS TO BE 2 or this function will EXPLODE!
-
-        self.description = {}
-        for ind, center in enumerate(centers):
-            drug_coor = []
-            for i in [-1, 1]:
-                comp_coor = [
-                    center[0] + ((distance / 2) * i),
-                    center[1],
-                    center[2],
-                ]
-                comp_coor = np.array(comp_coor)
-                drug_coor.append(comp_coor)
-
-            self.description[ind] = {"coordinates": drug_coor}
-
-        coord_arr = []
-        for drug in self.description.values():
-            for coord in drug["coordinates"]:
-                coord_arr.append(coord)
-        coord_arr = np.array(coord_arr)
-
+    def collision_check(self, dist_threshold):
         print(
             "Small drug particles generated. Starting protein collision"
             " check.\n"
@@ -184,6 +162,35 @@ class CGdrug:
 
         t2 = time.time()
         print(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
+
+    def _add_components(self, centers, n_comp, distance, dist_threshold):
+
+        # For now n_comp HAS TO BE 2 or this function will EXPLODE!
+
+        self.description = {}
+        for ind, center in enumerate(centers):
+            drug_coor = []
+            for i in [-1, 1]:
+                comp_coor = [
+                    center[0] + ((distance / 2) * i),
+                    center[1],
+                    center[2],
+                ]
+                comp_coor = np.array(comp_coor)
+                drug_coor.append(comp_coor)
+
+            self.description[ind] = {"coordinates": drug_coor}
+
+        coord_arr = []
+        for drug in self.description.values():
+            for coord in drug["coordinates"]:
+                coord_arr.append(coord)
+        coord_arr = np.array(coord_arr)
+
+
+        #self.collision_check(dist_threshold)
+
+        
 
     def _create_topology(self):
 
