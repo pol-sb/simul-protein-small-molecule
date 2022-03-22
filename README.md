@@ -1,4 +1,4 @@
-# tfm-small-drug
+# Protein Simulation
 
 ## Table of Contents
 
@@ -9,13 +9,7 @@
 
 ## About <a name = "about"></a>
 
-This is small modification to giulio's scripts to add the capacity to 
-introduce small molecules to the system and study their effects on the
-protein separation.
-
-==WIP==
-
-TODO: EXPAND THIS
+Scripts for the simulation of proteins with the capacity of introducing small molecules to the system and study their effects on protein separation.
 
 ## Getting Started <a name = "getting_started"></a>
 
@@ -49,4 +43,12 @@ End with an example of getting some data out of the system or using it for a lit
 
 ## Usage <a name = "usage"></a>
 
-Add notes about how to use the system.
+To run simulations, execute the `simulate.py` script with your python environment. The script has an argument parser which requires two arguments:
+- `name`: name of the protein (e.g. `FUS`).
+- `temp`: temperature in Kelvin.
+
+An example of a command to run a simulation:
+
+```
+python3 simulate.py --name FUS --temp 323
+```
