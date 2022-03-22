@@ -27,7 +27,7 @@ def add_drugs(
     dist_threshold: float,
     drug_components: int,
     directory: str,
-    components_distance=0.5,
+    comp_dist,
 ):
     # Decide how many particles to place by using the concentration.
     sim_box_data = system.getDefaultPeriodicBoxVectors()
@@ -48,10 +48,9 @@ def add_drugs(
     tot_mass = conc * sim_box_vol
     num_part = int(tot_mass / mass)
 
-    for part in range(num_part*2):
+    for part in range(num_part * 2):
         system.addParticle(12 * unit.amu)
 
-    print("system num parts in module:",system.getNumParticles())
     # Generating random coordinates array with the small particle random
     # coordinates
     # if drug_components == 1:
@@ -65,6 +64,7 @@ def add_drugs(
         in_top=in_top,
         in_traj=in_traj,
         dist_threshold=1,
+        distance=comp_dist,
     )
     drugs.add_charge(-1, 0)
 
@@ -74,7 +74,8 @@ def add_drugs(
     # Saving the Trajectory and Topology so it can be loaded later,
     # for example, if the calculation is stopped and then resumed.
     print(
-        f"\nSaving small molecule trajectories and topologies in:\n'{directory}'"
+        "\nSaving small molecule trajectories and topologies"
+        f" in:\n'{directory}'"
     )
     traj.save_pdb(directory + "sm_drg_traj.pdb")
     top_df = top.to_dataframe()
@@ -95,7 +96,7 @@ class CGdrug:
         in_traj,
         in_top,
         dist_threshold,
-        distance=0.5,
+        distance,
     ):
 
         self.n_drugs = n_drugs
@@ -166,6 +167,7 @@ class CGdrug:
     def _add_components(self, centers, n_comp, distance, dist_threshold):
 
         # For now n_comp HAS TO BE 2 or this function will EXPLODE!
+        print("distance: ", distance)
 
         self.description = {}
         for ind, center in enumerate(centers):
@@ -187,10 +189,7 @@ class CGdrug:
                 coord_arr.append(coord)
         coord_arr = np.array(coord_arr)
 
-
-        #self.collision_check(dist_threshold)
-
-        
+        self.collision_check(dist_threshold)
 
     def _create_topology(self):
 

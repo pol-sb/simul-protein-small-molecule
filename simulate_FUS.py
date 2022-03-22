@@ -78,8 +78,7 @@ def simulate(residues, name, prot, temp):
 
     # Generates 100 new coordinates for the xy array, which must fulfill
     # certain conditions:
-    #
-    #
+
     for x, y in np.random.rand(1000, 2) * (L - margin) - (L - margin) / 2:
         x1 = x - L if x > 0 else x + L
         y1 = y - L if y > 0 else y + L
@@ -120,8 +119,14 @@ def simulate(residues, name, prot, temp):
         [90, 90, 90],
     )
 
-    in_traj.save_pdb(name + "/{:d}/top.pdb".format(temp))
-    pdb = app.pdbfile.PDBFile(name + "/{:d}/top.pdb".format(temp))
+    try:
+        os.mkdir(f"./{name}")
+        os.mkdir(f"./{name}/{int(temp)}/")
+    except FileExistsError:
+        pass
+
+    in_traj.save_pdb(f"./{name}/{int(temp)}/top.pdb")
+    pdb = app.pdbfile.PDBFile(f"./{name}/{int(temp)}/top.pdb")
 
     # Adding finally the particles to the system, with their charge and a
     # term for compensating for the terminal residues (2 for a terminal NH2
@@ -134,6 +139,7 @@ def simulate(residues, name, prot, temp):
 
     print(in_traj.xyz.shape)
     print(top)
+    n_parts_old = system.getNumParticles()
 
     if not os.path.isfile(check_point):
         print("\nAdding small molecules to the system...")
@@ -147,24 +153,21 @@ def simulate(residues, name, prot, temp):
             dist_threshold=2,
             drug_components=2,
             directory=folder,
+            comp_dist=0.05,
         )
 
     else:
         print("\nReading small molecules from stored files...")
         top_ats = pd.read_csv(folder + "sm_drg_ats.csv")
+
+        n_drugs = (len(top_ats) - n_parts_old) // 2
+
         top_bnd = np.load(folder + "sm_drg_bnd.npy")
         top = md.Topology.from_dataframe(top_ats, top_bnd)
 
         in_traj = md.load(folder + "sm_drg_traj.pdb")
 
-        # print(in_traj.xyz.shape)
-        # print(top)
-
-    # TODO: This is giving me a problem, the number of particles in the pdb
-    # is 16636 (larger than 16468 which is init system + drugs) and results in
-    # an error.
     pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
-    print("len pdb: ", pdb.getTopology().getNumAtoms())
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
@@ -211,6 +214,7 @@ def simulate(residues, name, prot, temp):
         end = j * N + N
 
         for a, e in zip(prot.fasta, yukawa_eps):
+            # print("e: ", e)
             yu.addParticle([e * unit.nanometer * unit.kilojoules_per_mole])
             ah.addParticle(
                 [
@@ -236,7 +240,7 @@ def simulate(residues, name, prot, temp):
     for i in range(n_drugs * 2):
 
         # Yukawa Epsilon of the small molecules
-        yu.addParticle([1 * unit.nanometer * unit.kilojoules_per_mole])
+        yu.addParticle([0 * unit.nanometer * unit.kilojoules_per_mole])
         ah.addParticle(
             [
                 # Sigma of the small molecules.
@@ -246,7 +250,7 @@ def simulate(residues, name, prot, temp):
             ]
         )
 
-    # TODO: I will have to add bonds to my particles!! AAAA
+    # TODO: Add bonds for the small molecules here.
 
     print("ah:", ah.getNumParticles())
     print("yu:", yu.getNumParticles())
@@ -263,7 +267,7 @@ def simulate(residues, name, prot, temp):
     system.addForce(ah)
 
     serialized_system = XmlSerializer.serialize(system)
-    outfile = open("system.xml", "w")
+    outfile = open(f"./{name}/{int(temp)}/system.xml", "w")
     outfile.write(serialized_system)
     outfile.close()
 
@@ -292,6 +296,7 @@ def simulate(residues, name, prot, temp):
             )
         )
     else:
+        print("\nStarting simulation...\n")
         simulation.context.setPositions(pdb.positions)
         simulation.minimizeEnergy()
         simulation.reporters.append(
@@ -314,9 +319,10 @@ def simulate(residues, name, prot, temp):
         )
     )
 
-    # TODO: Defines total runtime (20h) and checkpoint save interval (5h)?
+    # Defines total runtime and checkpoint save interval?
+    # Initial runtime was 20h.
     simulation.runForClockTime(
-        2 * unit.minute,
+        1 * unit.minute,
         checkpointFile=check_point,
         checkpointInterval=30 * unit.second,
     )
@@ -324,8 +330,6 @@ def simulate(residues, name, prot, temp):
     # Saves checkpoint file
     simulation.saveCheckpoint(check_point)
 
-    # TODO: What is this.
-    # genDCD(residues, name, prot, temp, n_chains)
     positions = simulation.context.getState(getPositions=True).getPositions()
     app.PDBFile.writeFile(
         simulation.topology,
@@ -339,4 +343,4 @@ proteins = pd.read_pickle("proteins.pkl")
 print(args.name, args.temp)
 t0 = time.time()
 simulate(residues, args.name, proteins.loc[args.name], args.temp)
-print("Simulation Done. Total time: {:.3f}".format(time.time() - t0))
+print("Simulation Done. Total time: {:.1f} s.".format(time.time() - t0))
