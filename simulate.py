@@ -72,9 +72,9 @@ def simulate(residues, name, prot, temp):
     xy = np.empty(0)
 
     # Generates a 1x2 vector with two x and y coordinates.
-    xy = np.append(
-        xy, np.random.rand(2) * (L - margin) - (L - margin) / 2
-    ).reshape((-1, 2))
+    xy = np.append(xy, np.random.rand(2) * (L - margin) - (L - margin) / 2).reshape(
+        (-1, 2)
+    )
 
     # Generates 100 new coordinates for the xy array, which must fulfill
     # certain conditions:
@@ -141,6 +141,10 @@ def simulate(residues, name, prot, temp):
     print(top)
     n_parts_old = system.getNumParticles()
 
+    # TODO: This should be defined in a separate input file and read as a dict
+    # or be given as a parameter in the argument parser.
+    comp_dist = 0.5
+
     if not os.path.isfile(check_point):
         print("\nAdding small molecules to the system...")
         # My function to add small particles to the system
@@ -153,7 +157,7 @@ def simulate(residues, name, prot, temp):
             dist_threshold=2,
             drug_components=2,
             directory=folder,
-            comp_dist=0.05,
+            comp_dist=comp_dist,
         )
 
     else:
@@ -231,26 +235,39 @@ def simulate(residues, name, prot, temp):
                 8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
             )
 
-            # Important
+            # Important, this makes pair not affect eachother with non bonded
+            # potentials
             yu.addExclusion(i, i + 1)
             ah.addExclusion(i, i + 1)
 
     # Adding the small drug particles to the CustomNonbondedForce used in
     # # the system. n_drugs (number of small molecules) by 2 (bimolecular).
+    # TODO: Allow to choose which AA is used instead of just Glycine.
     for i in range(n_drugs * 2):
 
         # Yukawa Epsilon of the small molecules
         yu.addParticle([0 * unit.nanometer * unit.kilojoules_per_mole])
         ah.addParticle(
             [
-                # Sigma of the small molecules.
-                1 * unit.nanometer,
-                # Lambda of the small molecules.
-                1 * unit.dimensionless,
+                residues.loc["G"].sigmas * unit.nanometer,
+                residues.loc["G"].lambdas * unit.dimensionless,
             ]
         )
 
-    # TODO: Add bonds for the small molecules here.
+    # Adding bonds between the small molecules.
+    for i in range(n_parts_old, n_parts_old + (n_drugs * 2) - 1):
+        # print(f"\nbond: {i}-{i+1}")
+        a = hb.addBond(
+            i,
+            i + 1,
+            comp_dist * unit.nanometer,
+            5000 * unit.kilojoules_per_mole / (unit.nanometer**2),
+        )
+
+        # Important, this makes pair not affect eachother with non bonded
+        # potentials
+        yu.addExclusion(i, i + 1)
+        ah.addExclusion(i, i + 1)
 
     print("ah:", ah.getNumParticles())
     print("yu:", yu.getNumParticles())
@@ -291,30 +308,52 @@ def simulate(residues, name, prot, temp):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + "/{:d}/{:s}.dcd".format(temp, name),
-                int(10),
+                int(1),
                 append=True,
             )
         )
     else:
         print("\nStarting simulation...\n")
         simulation.context.setPositions(pdb.positions)
+
+        # TODO: Why does this not finish?!
+
+        print(
+            "Initial potential energy:\n ",
+            simulation.context.getState(getEnergy=True).getPotentialEnergy(),
+        )
+
+        # simulation.reporters.append(PDBReporter(‘output.pdb’, 1))
+
         simulation.minimizeEnergy()
+
+        print("\nEnergy minimized.")
+        print(
+            "Potential energy after minimization:\n ",
+            simulation.context.getState(getEnergy=True).getPotentialEnergy(),
+        )
+
+        # TODO: Make this a DCD Reporter when the program works okay.
+        # If this is made  DCD Reporter, I should create a PDB file at
+        # iteration 1 to have the parameters for the DCD
         simulation.reporters.append(
-            app.dcdreporter.DCDReporter(
-                name + "/{:d}/{:s}.dcd".format(temp, name), int(10)
+            app.pdbreporter.PDBReporter(
+                name + "/{:d}/{:s}_report.pdb".format(temp, name), int(10)
             )
         )
 
     # Generates log file with information
     simulation.reporters.append(
         app.statedatareporter.StateDataReporter(
-            "{:s}_{:d}.log".format(name, temp),
+            f"{folder}{name}_{temp}.log",
             10,
             potentialEnergy=True,
             temperature=True,
             step=True,
             speed=True,
             elapsedTime=True,
+            remainingTime=True,
+            totalSteps=True,
             separator="\t",
         )
     )
@@ -322,7 +361,7 @@ def simulate(residues, name, prot, temp):
     # Defines total runtime and checkpoint save interval?
     # Initial runtime was 20h.
     simulation.runForClockTime(
-        1 * unit.minute,
+        5 * unit.minute,
         checkpointFile=check_point,
         checkpointInterval=30 * unit.second,
     )
