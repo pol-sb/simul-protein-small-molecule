@@ -8,13 +8,8 @@ import small_molecule as smol
 import os
 from argparse import ArgumentParser
 
-parser = ArgumentParser()
-parser.add_argument("--name", nargs="?", const="", type=str)
-parser.add_argument("--temp", nargs="?", const="", type=int)
-args = parser.parse_args()
 
-
-def simulate(residues, name, prot, temp):
+def simulate(residues, name, prot, temp, small_molec, sim_time):
 
     folder = name + "/{:d}/".format(temp)
     check_point = folder + "restart.chk"
@@ -37,16 +32,16 @@ def simulate(residues, name, prot, temp):
 
     # setting slab parameters
     L = 15.0
-    margin = 2
+    marg = 2
     if N > 400:
         L = 25.0
         Lz = 300.0
-        margin = 8
+        marg = 8
         Nsteps = int(2e7)
     elif N > 200:
         L = 17.0
         Lz = 300.0
-        margin = 4
+        marg = 4
         Nsteps = int(6e7)
     else:
         Lz = 10 * L
@@ -72,14 +67,12 @@ def simulate(residues, name, prot, temp):
     xy = np.empty(0)
 
     # Generates a 1x2 vector with two x and y coordinates.
-    xy = np.append(xy, np.random.rand(2) * (L - margin) - (L - margin) / 2).reshape(
-        (-1, 2)
-    )
+    xy = np.append(xy, np.random.rand(2) * (L - marg) - (L - marg) / 2).reshape((-1, 2))
 
     # Generates 100 new coordinates for the xy array, which must fulfill
     # certain conditions:
 
-    for x, y in np.random.rand(1000, 2) * (L - margin) - (L - margin) / 2:
+    for x, y in np.random.rand(1000, 2) * (L - marg) - (L - marg) / 2:
         x1 = x - L if x > 0 else x + L
         y1 = y - L if y > 0 else y + L
         if np.all(np.linalg.norm(xy - [x, y], axis=1) > 0.7):
@@ -146,19 +139,26 @@ def simulate(residues, name, prot, temp):
     comp_dist = 0.5
 
     if not os.path.isfile(check_point):
-        print("\nAdding small molecules to the system...")
-        # My function to add small particles to the system
-        in_traj, top, system, n_drugs = smol.add_drugs(
-            system=system,
-            in_traj=in_traj,
-            in_top=top,
-            conc=0.005,
-            mass=1,
-            dist_threshold=2,
-            drug_components=2,
-            directory=folder,
-            comp_dist=comp_dist,
-        )
+
+        if small_molec:
+            # TODO: Use these variables in the small_molec function to get
+            # parameters. Maybe save the small molecule params in a csv file?
+            smol_name = small_molec[0]
+            smol_conc = float(small_molec[1])
+
+            print("\nAdding small molecules to the system...")
+            # My function to add small particles to the system
+            in_traj, top, system, n_drugs = smol.add_drugs(
+                system=system,
+                in_traj=in_traj,
+                in_top=top,
+                conc=0.005,
+                mass=1,
+                dist_threshold=2,
+                drug_components=2,
+                directory=folder,
+                comp_dist=comp_dist,
+            )
 
     else:
         print("\nReading small molecules from stored files...")
@@ -360,15 +360,18 @@ def simulate(residues, name, prot, temp):
 
     # Defines total runtime and checkpoint save interval?
     # Initial runtime was 20h.
+    # The checkpoint save time scales with the simulation length. The interval
+    # can be adjusted.
     simulation.runForClockTime(
-        5 * unit.minute,
+        sim_time * unit.second,
         checkpointFile=check_point,
-        checkpointInterval=30 * unit.second,
+        checkpointInterval=sim_time * 0.06 * unit.second,
     )
 
     # Saves checkpoint file
     simulation.saveCheckpoint(check_point)
 
+    # Save final system position.
     positions = simulation.context.getState(getPositions=True).getPositions()
     app.PDBFile.writeFile(
         simulation.topology,
@@ -377,9 +380,74 @@ def simulate(residues, name, prot, temp):
     )
 
 
-residues = pd.read_csv("residues.csv").set_index("three", drop=False)
-proteins = pd.read_pickle("proteins.pkl")
-print(args.name, args.temp)
-t0 = time.time()
-simulate(residues, args.name, proteins.loc[args.name], args.temp)
-print("Simulation Done. Total time: {:.1f} s.".format(time.time() - t0))
+def arg_parse():
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--name",
+        "-n",
+        nargs=1,
+        type=str,
+        help="Name of the protein sequence to be simulated.",
+    )
+    parser.add_argument(
+        "--temp",
+        "-t",
+        nargs=1,
+        type=int,
+        help="Temperature (in K) of the system.",
+    )
+    parser.add_argument(
+        "--small-molec",
+        "-sm",
+        nargs=2,
+        type=str,
+        help="Name and concentration of the small molecules to be added.",
+    )
+
+    parser.add_argument(
+        "--hours",
+        "-th",
+        nargs="?",
+        default=20,
+        const=20,
+        type=int,
+        help="Number of hours to run the simulation. The default is 20h.",
+    )
+
+    parser.add_argument(
+        "--seconds",
+        "-tsec",
+        nargs="?",
+        default=0,
+        const=0,
+        type=int,
+        help="Number of seconds to run the simulation.",
+    )
+
+    args = parser.parse_args()
+
+    return args
+
+
+if __name__ == "__main__":
+
+    args = arg_parse()
+
+    simul_time = args.hours * 3600 + args.seconds
+
+    residues = pd.read_csv("residues.csv").set_index("three", drop=False)
+    proteins = pd.read_pickle("proteins.pkl")
+
+    print(f"Working with protein {args.name[0]} at {args.temp[0]} K.")
+
+    t0 = time.time()
+    simulate(
+        residues=residues,
+        name=args.name[0],
+        prot=proteins.loc[args.name[0]],
+        temp=args.temp[0],
+        small_molec=args.small_molec,
+        sim_time=simul_time,
+    )
+
+    print("Simulation Done. Total time: {:.1f} s.".format(time.time() - t0))

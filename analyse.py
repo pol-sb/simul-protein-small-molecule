@@ -85,9 +85,7 @@ YRVGNGNGQSGGRNSRGGGGGNGGANYGLEHHHHHH""".replace(
     proteins.loc["FUS"] = dict(
         eps_factor=0.2, pH=5.5, fasta=list(fasta_FUS), ionic=0.15
     )
-    proteins.loc["A1"] = dict(
-        eps_factor=0.2, pH=7.0, fasta=list(fasta_A1), ionic=0.15
-    )
+    proteins.loc["A1"] = dict(eps_factor=0.2, pH=7.0, fasta=list(fasta_A1), ionic=0.15)
     proteins.loc["A1star200"] = dict(
         eps_factor=0.2, pH=7.0, fasta=list(fasta_A1star), ionic=0.2
     )
@@ -110,8 +108,12 @@ YRVGNGNGQSGGRNSRGGGGGNGGANYGLEHHHHHH""".replace(
 
 
 def genParamsLJ(df, name, prot):
+
+    # I added a [0] in here.
     fasta = prot.fasta.copy()
+
     r = df.copy()
+    # print('r: ', r)
     r.loc["X"] = r.loc[fasta[0]]
     r.loc["Z"] = r.loc[fasta[-1]]
     r.loc["X", "MW"] += 2
@@ -128,8 +130,10 @@ def genParamsDH(df, name, prot, temp):
     kT = 8.3145 * temp * 1e-3
     fasta = prot.fasta.copy()
     r = df.copy()
+
     # Set the charge on HIS based on the pH of the protein solution
-    r.loc["H", "q"] = 1.0 / (1 + 10 ** (prot.pH - 6))
+    r.loc["H", "q"] = int(1.0 / (1 + 10 ** (prot.pH - 6)))
+
     r.loc["X"] = r.loc[fasta[0]]
     r.loc["Z"] = r.loc[fasta[-1]]
     fasta[0] = "X"
@@ -173,9 +177,7 @@ def genDCD(residues, name, prot, temp, n_chains):
     edges = np.arange(-lz / 2.0, lz / 2.0, 1)
     dz = (edges[1] - edges[0]) / 2.0
     z = edges[:-1] + dz
-    h = np.apply_along_axis(
-        lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2]
-    )
+    h = np.apply_along_axis(lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2])
     zmid = np.apply_along_axis(lambda a: z[a.argmax()], 1, h)
     indices = np.argmin(np.abs(t.xyz[:, :, 2] - zmid[:, np.newaxis]), axis=1)
     t[0].save_pdb(name + "/{:d}".format(temp) + "/top.pdb")
@@ -186,9 +188,7 @@ def genDCD(residues, name, prot, temp, n_chains):
         name + "/{:d}".format(temp) + "/traj3.dcd",
     )
     ag = u.atoms
-    with MDAnalysis.Writer(
-        name + "/{:d}".format(temp) + "/traj2.dcd", ag.n_atoms
-    ) as W:
+    with MDAnalysis.Writer(name + "/{:d}".format(temp) + "/traj2.dcd", ag.n_atoms) as W:
         for ts, ndx in zip(u.trajectory, indices):
             ts = transformations.unwrap(ag)
             ts = transformations.center_in_box(
@@ -205,12 +205,8 @@ def genDCD(residues, name, prot, temp, n_chains):
     edges = np.arange(0, lz, 1)
     dz = (edges[1] - edges[0]) / 2.0
     z = edges[:-1] + dz
-    h = np.apply_along_axis(
-        lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2]
-    )
-    zmid = np.apply_along_axis(
-        lambda a: z[a > np.quantile(a, 0.98)].mean(), 1, h
-    )
+    h = np.apply_along_axis(lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2])
+    zmid = np.apply_along_axis(lambda a: z[a > np.quantile(a, 0.98)].mean(), 1, h)
     indices = np.argmin(np.abs(t.xyz[:, :, 2] - zmid[:, np.newaxis]), axis=1)
 
     u = MDAnalysis.Universe(
@@ -218,9 +214,7 @@ def genDCD(residues, name, prot, temp, n_chains):
         name + "/{:d}".format(temp) + "/traj2.dcd",
     )
     ag = u.atoms
-    with MDAnalysis.Writer(
-        name + "/{:d}".format(temp) + "/traj1.dcd", ag.n_atoms
-    ) as W:
+    with MDAnalysis.Writer(name + "/{:d}".format(temp) + "/traj1.dcd", ag.n_atoms) as W:
         for ts, ndx in zip(u.trajectory, indices):
             ts = transformations.unwrap(ag)(ts)
             ts = transformations.center_in_box(
@@ -237,14 +231,10 @@ def genDCD(residues, name, prot, temp, n_chains):
     edges = np.arange(0, lz, 1)
     dz = (edges[1] - edges[0]) / 2.0
     z = edges[:-1] + dz
-    h = np.apply_along_axis(
-        lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2]
-    )
+    h = np.apply_along_axis(lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2])
     h1 = np.mean(h[:1000], axis=0)
     maxoverlap = np.apply_along_axis(
-        lambda a: np.correlate(
-            h1, np.histogram(a, bins=edges)[0], "full"
-        ).argmax()
+        lambda a: np.correlate(h1, np.histogram(a, bins=edges)[0], "full").argmax()
         - h1.size
         + dz,
         1,
@@ -256,9 +246,7 @@ def genDCD(residues, name, prot, temp, n_chains):
         name + "/{:d}".format(temp) + "/traj1.dcd",
     )
     ag = u.atoms
-    with MDAnalysis.Writer(
-        name + "/{:d}".format(temp) + "/traj.dcd", ag.n_atoms
-    ) as W:
+    with MDAnalysis.Writer(name + "/{:d}".format(temp) + "/traj.dcd", ag.n_atoms) as W:
         for ts, mo in zip(u.trajectory, maxoverlap):
             ts = transformations.unwrap(ag)(ts)
             ts = transformations.translate([0, 0, mo * 10])(ts)
@@ -269,9 +257,7 @@ def genDCD(residues, name, prot, temp, n_chains):
         name + "/{:d}".format(temp) + "/traj.dcd",
         top=name + "/{:d}".format(temp) + "/top.pdb",
     )
-    h = np.apply_along_axis(
-        lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2]
-    )
+    h = np.apply_along_axis(lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2])
     np.save("{:s}_{:d}.npy".format(name, temp), h, allow_pickle=False)
     os.remove(name + "/{:d}".format(temp) + "/traj1.dcd")
     os.remove(name + "/{:d}".format(temp) + "/traj2.dcd")
