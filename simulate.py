@@ -161,6 +161,8 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
             )
 
             pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
+            print("Number of particles:", system.getNumParticles())
+            print("Number of drugs:", n_drugs)
 
         else:
             print("No small molecule given. Proceeding with only protein.")
@@ -214,9 +216,6 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
     ah.addGlobalParameter("eps", lj_eps * unit.kilojoules_per_mole)
     ah.addPerParticleParameter("s")
     ah.addPerParticleParameter("l")
-
-    print("Number of particles:", system.getNumParticles())
-    print("Number of drugs:", n_drugs)
 
     for j in range(n_chains):
         begin = j * N
@@ -298,13 +297,14 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
     )  # 322
 
     # Uses CUDA as the platform for the GPU calculations.
-    platform = openmm.Platform.getPlatformByName("CPU")
+    platform = openmm.Platform.getPlatformByName("CUDA")
 
     simulation = app.simulation.Simulation(
         pdb.topology,
         system,
         integrator,
         platform,
+        dict(CudaPrecision="mixed"),
     )
 
     if os.path.isfile(check_point):
