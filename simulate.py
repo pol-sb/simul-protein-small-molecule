@@ -346,8 +346,9 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
         # If this is made  DCD Reporter, I should create a PDB file at
         # iteration 1 to have the parameters for the DCD
         simulation.reporters.append(
-            app.pdbreporter.DCDReporter(
-                name + "/{:d}/{:s}_report.dcd".format(temp, name), int(1000)
+            app.dcdreporter.DCDReporter(
+                name + "/{:d}/{:s}_report.dcd".format(temp, name),
+                int(1000),
             )
         )
 
