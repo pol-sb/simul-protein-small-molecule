@@ -315,7 +315,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + "/{:d}/{:s}.dcd".format(temp, name),
-                int(1000),
+                int(500),
                 append=True,
             )
         )
@@ -348,7 +348,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + "/{:d}/{:s}_report.dcd".format(temp, name),
-                int(1000),
+                int(500),
             )
         )
 
@@ -356,7 +356,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
     simulation.reporters.append(
         app.statedatareporter.StateDataReporter(
             f"{folder}{name}_{temp}.log",
-            10,
+            1000,
             potentialEnergy=True,
             temperature=True,
             step=True,
