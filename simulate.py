@@ -159,6 +159,9 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
                 directory=folder,
                 comp_dist=comp_dist,
             )
+
+            pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
+
         else:
             print("No small molecule given. Proceeding with only protein.")
 
@@ -173,7 +176,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
 
         in_traj = md.load(folder + "sm_drg_traj.pdb")
 
-    pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
+        pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
