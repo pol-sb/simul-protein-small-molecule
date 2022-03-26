@@ -1,12 +1,12 @@
-import numpy as np
-import openmm
-import pandas as pd
 import pprint as pp
-import openmm.unit as unit
-import openmm.app as app
-import mdtraj as md
 import time
 
+import mdtraj as md
+import numpy as np
+import openmm
+import openmm.app as app
+import openmm.unit as unit
+import pandas as pd
 
 # TODO: Make it so that the added particles dont collide with the residues after
 # being placed.
@@ -27,7 +27,7 @@ def add_drugs(
     dist_threshold: float,
     drug_components: int,
     directory: str,
-    components_distance=0.5,
+    comp_dist,
 ):
     # Decide how many particles to place by using the concentration.
     sim_box_data = system.getDefaultPeriodicBoxVectors()
@@ -48,7 +48,11 @@ def add_drugs(
     tot_mass = conc * sim_box_vol
     num_part = int(tot_mass / mass)
 
+<<<<<<< HEAD
     for part in range(num_part):
+=======
+    for part in range(num_part * 2):
+>>>>>>> lap-test
         system.addParticle(12 * unit.amu)
 
     # Generating random coordinates array with the small particle random
@@ -64,6 +68,7 @@ def add_drugs(
         in_top=in_top,
         in_traj=in_traj,
         dist_threshold=1,
+        distance=comp_dist,
     )
     drugs.add_charge(-1, 0)
 
@@ -73,7 +78,8 @@ def add_drugs(
     # Saving the Trajectory and Topology so it can be loaded later,
     # for example, if the calculation is stopped and then resumed.
     print(
-        f"\nSaving small molecule trajectories and topologies in:\n'{directory}'"
+        "\nSaving small molecule trajectories and topologies"
+        f" in:\n'{directory}'"
     )
     traj.save_pdb(directory + "sm_drg_traj.pdb")
     top_df = top.to_dataframe()
@@ -82,7 +88,7 @@ def add_drugs(
     top_ats.to_csv(directory + "sm_drg_ats.csv")
     np.save(directory + "sm_drg_bnd.npy", top_bnd)
 
-    return traj, top, system
+    return traj, top, system, num_part
 
 
 class CGdrug:
@@ -94,7 +100,7 @@ class CGdrug:
         in_traj,
         in_top,
         dist_threshold,
-        distance=0.5,
+        distance,
     ):
 
         self.n_drugs = n_drugs
@@ -126,30 +132,7 @@ class CGdrug:
 
         return centers
 
-    def _add_components(self, centers, n_comp, distance, dist_threshold):
-
-        # For now n_comp HAS TO BE 2 or this function will EXPLODE!
-
-        self.description = {}
-        for ind, center in enumerate(centers):
-            drug_coor = []
-            for i in [-1, 1]:
-                comp_coor = [
-                    center[0] + ((distance / 2) * i),
-                    center[1],
-                    center[2],
-                ]
-                comp_coor = np.array(comp_coor)
-                drug_coor.append(comp_coor)
-
-            self.description[ind] = {"coordinates": drug_coor}
-
-        coord_arr = []
-        for drug in self.description.values():
-            for coord in drug["coordinates"]:
-                coord_arr.append(coord)
-        coord_arr = np.array(coord_arr)
-
+    def collision_check(self, dist_threshold):
         print(
             "Small drug particles generated. Starting protein collision"
             " check.\n"
@@ -184,6 +167,33 @@ class CGdrug:
 
         t2 = time.time()
         print(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
+
+    def _add_components(self, centers, n_comp, distance, dist_threshold):
+
+        # For now n_comp HAS TO BE 2 or this function will EXPLODE!
+        print("distance: ", distance)
+
+        self.description = {}
+        for ind, center in enumerate(centers):
+            drug_coor = []
+            for i in [-1, 1]:
+                comp_coor = [
+                    center[0] + ((distance / 2) * i),
+                    center[1],
+                    center[2],
+                ]
+                comp_coor = np.array(comp_coor)
+                drug_coor.append(comp_coor)
+
+            self.description[ind] = {"coordinates": drug_coor}
+
+        coord_arr = []
+        for drug in self.description.values():
+            for coord in drug["coordinates"]:
+                coord_arr.append(coord)
+        coord_arr = np.array(coord_arr)
+
+        self.collision_check(dist_threshold)
 
     def _create_topology(self):
 
