@@ -362,8 +362,6 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
             step=True,
             speed=True,
             elapsedTime=True,
-            remainingTime=True,
-            totalSteps=True,
             separator="\t",
         )
     )
