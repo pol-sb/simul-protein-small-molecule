@@ -1,3 +1,4 @@
+from cgitb import small
 import openmm
 import openmm.unit as unit
 from openmm import app
@@ -247,31 +248,32 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
     # Adding the small drug particles to the CustomNonbondedForce used in
     # # the system. n_drugs (number of small molecules) by 2 (bimolecular).
     # TODO: Allow to choose which AA is used instead of just Glycine.
-    for i in range(n_drugs * 2):
+    if small_molec:
+        for i in range(n_drugs * 2):
 
-        # Yukawa Epsilon of the small molecules
-        yu.addParticle([0 * unit.nanometer * unit.kilojoules_per_mole])
-        ah.addParticle(
-            [
-                residues.loc["G"].sigmas * unit.nanometer,
-                residues.loc["G"].lambdas * unit.dimensionless,
-            ]
-        )
+            # Yukawa Epsilon of the small molecules
+            yu.addParticle([0 * unit.nanometer * unit.kilojoules_per_mole])
+            ah.addParticle(
+                [
+                    residues.loc["G"].sigmas * unit.nanometer,
+                    residues.loc["G"].lambdas * unit.dimensionless,
+                ]
+            )
 
-    # Adding bonds between the small molecules.
-    for i in range(n_parts_old, n_parts_old + (n_drugs * 2) - 1):
-        # print(f"\nbond: {i}-{i+1}")
-        a = hb.addBond(
-            i,
-            i + 1,
-            comp_dist * unit.nanometer,
-            5000 * unit.kilojoules_per_mole / (unit.nanometer**2),
-        )
+        # Adding bonds between the small molecules.
+        for i in range(n_parts_old, n_parts_old + (n_drugs * 2) - 1):
+            # print(f"\nbond: {i}-{i+1}")
+            a = hb.addBond(
+                i,
+                i + 1,
+                comp_dist * unit.nanometer,
+                5000 * unit.kilojoules_per_mole / (unit.nanometer**2),
+            )
 
-        # Important, this makes pair not affect eachother with non bonded
-        # potentials
-        yu.addExclusion(i, i + 1)
-        ah.addExclusion(i, i + 1)
+            # Important, this makes pair not affect eachother with non bonded
+            # potentials
+            yu.addExclusion(i, i + 1)
+            ah.addExclusion(i, i + 1)
 
     print("ah:", ah.getNumParticles())
     print("yu:", yu.getNumParticles())
