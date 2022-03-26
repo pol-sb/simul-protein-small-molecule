@@ -159,6 +159,8 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
                 directory=folder,
                 comp_dist=comp_dist,
             )
+        else:
+            print("No small molecule given. Proceeding with only protein.")
 
     else:
         print("\nReading small molecules from stored files...")
