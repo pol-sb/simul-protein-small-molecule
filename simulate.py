@@ -179,18 +179,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
 
         in_traj = md.load(folder + "sm_drg_traj.pdb")
 
-<<<<<<< HEAD:simulate_FUS.py
-        # print(in_traj.xyz.shape)
-        # print(top)
-
-    print(in_traj.xyz.shape)
-    print(top)
-    print(system)
-
-    pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
-=======
         pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
->>>>>>> lap-test:simulate.py
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
