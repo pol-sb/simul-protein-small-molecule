@@ -315,7 +315,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + "/{:d}/{:s}.dcd".format(temp, name),
-                int(1),
+                int(1000),
                 append=True,
             )
         )
@@ -340,12 +340,14 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
             simulation.context.getState(getEnergy=True).getPotentialEnergy(),
         )
 
+        print(f"\nRunning simulation for {sim_time} s.")
+
         # TODO: Make this a DCD Reporter when the program works okay.
         # If this is made  DCD Reporter, I should create a PDB file at
         # iteration 1 to have the parameters for the DCD
         simulation.reporters.append(
-            app.pdbreporter.PDBReporter(
-                name + "/{:d}/{:s}_report.pdb".format(temp, name), int(10)
+            app.pdbreporter.DCDReporter(
+                name + "/{:d}/{:s}_report.dcd".format(temp, name), int(1000)
             )
         )
 
