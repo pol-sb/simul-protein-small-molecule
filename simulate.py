@@ -306,7 +306,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
         system,
         integrator,
         platform,
-        dict(CudaPrecision="mixed"),
+        dict(CudaPrecision="mixed", DeviceIndex='0,1'),
     )
 
     if os.path.isfile(check_point):
