@@ -1,16 +1,17 @@
-from cgitb import small
-import openmm
-import openmm.unit as unit
-from openmm import app
-from openmm import XmlSerializer
-from analyse import *
-import time
-import small_molecule as smol
+import logging
 import os
+import time
 from argparse import ArgumentParser
 
+import openmm
+import openmm.unit as unit
+from openmm import XmlSerializer, app
 
-def simulate(residues, name, prot, temp, small_molec, sim_time):
+import small_molecule as smol
+from analyse import *
+
+
+def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
 
     folder = name + "/{:d}/".format(temp)
     check_point = folder + "restart.chk"
@@ -115,10 +116,15 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
 
     try:
         os.mkdir(f"./{name}")
+    except FileExistsError:
+        pass
+
+    try:
         os.mkdir(f"./{name}/{int(temp)}/")
     except FileExistsError:
         pass
 
+    logger.info(f"Storing files in {os.getcwd()}/{name}/{int(temp)}/")
     in_traj.save_pdb(f"./{name}/{int(temp)}/top.pdb")
     pdb = app.pdbfile.PDBFile(f"./{name}/{int(temp)}/top.pdb")
 
@@ -131,8 +137,8 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
             system.addParticle(residues.loc[a].MW * unit.amu)
         system.addParticle((residues.loc[prot.fasta[-1]].MW + 16) * unit.amu)
 
-    print(in_traj.xyz.shape)
-    print(top)
+    logger.debug(in_traj.xyz.shape)
+    logger.debug(top)
     n_parts_old = system.getNumParticles()
 
     # TODO: This should be defined in a separate input file and read as a dict
@@ -147,7 +153,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
             smol_name = small_molec[0]
             smol_conc = float(small_molec[1])
 
-            print("\nAdding small molecules to the system...")
+            logger.info("\nAdding small molecules to the system...")
             # My function to add small particles to the system
             in_traj, top, system, n_drugs = smol.add_drugs(
                 system=system,
@@ -159,17 +165,18 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
                 drug_components=2,
                 directory=folder,
                 comp_dist=comp_dist,
+                verbosity=verbosity,
             )
 
             pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
-            print("Number of particles:", system.getNumParticles())
-            print("Number of drugs:", n_drugs)
+            logger.debug(f"Number of particles: {system.getNumParticles()}")
+            logger.debug(f"Number of drugs: {n_drugs}")
 
         else:
-            print("No small molecule given. Proceeding with only protein.")
+            logger.info("No small molecule given. Proceeding with only protein.")
 
     else:
-        print("\nReading small molecules from stored files...")
+        logger.info("\nReading small molecules from stored files...")
         top_ats = pd.read_csv(folder + "sm_drg_ats.csv")
 
         n_drugs = (len(top_ats) - n_parts_old) // 2
@@ -275,8 +282,8 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
             yu.addExclusion(i, i + 1)
             ah.addExclusion(i, i + 1)
 
-    print("ah:", ah.getNumParticles())
-    print("yu:", yu.getNumParticles())
+    logger.debug(f"ah:, {ah.getNumParticles()}")
+    logger.debug(f"yu:, {yu.getNumParticles()}")
 
     yu.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
     ah.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
@@ -299,18 +306,18 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
     )  # 322
 
     # Uses CUDA as the platform for the GPU calculations.
-    platform = openmm.Platform.getPlatformByName("CUDA")
+    platform = openmm.Platform.getPlatformByName("CPU")
 
     simulation = app.simulation.Simulation(
         pdb.topology,
         system,
         integrator,
         platform,
-        dict(CudaPrecision="mixed", DeviceIndex='0,1'),
+        # dict(CudaPrecision="mixed", DeviceIndex="0,1"),
     )
 
     if os.path.isfile(check_point):
-        print("\nResuming simulation from checkpoint file\n")
+        logger.info("\nResuming simulation from checkpoint file\n")
         simulation.loadCheckpoint(check_point)
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
@@ -320,27 +327,25 @@ def simulate(residues, name, prot, temp, small_molec, sim_time):
             )
         )
     else:
-        print("\nStarting simulation...\n")
+        logger.info("\nStarting simulation...\n")
         simulation.context.setPositions(pdb.positions)
 
-        # TODO: Why does this not finish?!
-
-        print(
-            "Initial potential energy:\n ",
-            simulation.context.getState(getEnergy=True).getPotentialEnergy(),
+        logger.info(
+            "Initial potential energy:"
+            f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
         )
 
         # simulation.reporters.append(PDBReporter(‘output.pdb’, 1))
 
         simulation.minimizeEnergy()
 
-        print("\nEnergy minimized.")
-        print(
-            "Potential energy after minimization:\n ",
-            simulation.context.getState(getEnergy=True).getPotentialEnergy(),
+        logger.info("\nEnergy minimized.")
+        logger.info(
+            "Potential energy after minimization:"
+            f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
         )
 
-        print(f"\nRunning simulation for {sim_time} s.")
+        logger.info(f"\nRunning simulation for {sim_time} s.")
 
         # TODO: Make this a DCD Reporter when the program works okay.
         # If this is made  DCD Reporter, I should create a PDB file at
@@ -423,6 +428,20 @@ def arg_parse():
     )
 
     parser.add_argument(
+        "-v",
+        "--verbose",
+        help="increase output verbosity",
+        action="store_true",
+    )
+
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        help="decrease output verbosity",
+        action="store_true",
+    )
+
+    parser.add_argument(
         "--seconds",
         "-tsec",
         nargs="?",
@@ -441,12 +460,28 @@ if __name__ == "__main__":
 
     args = arg_parse()
 
+    fmt_str = "%(asctime)s - %(levelname)s:\n\t %(message)s"
+    if args.verbose and not args.quiet:
+        verb = logging.DEBUG
+        logging.basicConfig(level=verb, format=fmt_str)
+    elif args.quiet and not args.verbose:
+        verb = logging.ERROR
+        logging.basicConfig(level=verb, format=fmt_str)
+    else:
+        verb = logging.INFO
+        fmt_str = "%(message)s"
+        logging.basicConfig(level=verb, format=fmt_str)
+
+    verbosity = [verb, fmt_str]
+    # create logger
+    logger = logging.getLogger("main simulation")
+
     simul_time = args.hours * 3600 + args.seconds
 
     residues = pd.read_csv("residues.csv").set_index("three", drop=False)
     proteins = pd.read_pickle("proteins.pkl")
 
-    print(f"Working with protein {args.name[0]} at {args.temp[0]} K.")
+    logger.info(f"\nWorking with protein {args.name[0]} at {args.temp[0]} K.")
 
     t0 = time.time()
     simulate(
@@ -456,6 +491,7 @@ if __name__ == "__main__":
         temp=args.temp[0],
         small_molec=args.small_molec,
         sim_time=simul_time,
+        verbosity=verbosity,
     )
 
-    print("Simulation Done. Total time: {:.1f} s.".format(time.time() - t0))
+    logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")

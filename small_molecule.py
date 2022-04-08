@@ -1,3 +1,4 @@
+import logging
 import pprint as pp
 import time
 
@@ -17,6 +18,8 @@ import pandas as pd
 
 # TODO: Add Charge
 
+logger = logging.getLogger("small molecule")
+
 
 def add_drugs(
     system: openmm.openmm.System,
@@ -28,7 +31,11 @@ def add_drugs(
     drug_components: int,
     directory: str,
     comp_dist,
+    verbosity,
 ):
+    # Get verbosity level
+    # logger.setLevel(verbosity[0])
+
     # Decide how many particles to place by using the concentration.
     sim_box_data = system.getDefaultPeriodicBoxVectors()
     sim_box_unit = sim_box_data[0].unit
@@ -38,8 +45,8 @@ def add_drugs(
 
     sim_box_vol = len_x * len_y * len_z
 
-    # print("mass: ", mass)
-    # print("conc: ", conc)
+    logger.debug(f"mass: {mass}")
+    logger.debug(f"conc: {conc}")
 
     # TODO: Check this
     # Computing the total number of particles needed to fulfill
@@ -65,6 +72,7 @@ def add_drugs(
         in_traj=in_traj,
         dist_threshold=1,
         distance=comp_dist,
+        verbosity=verbosity,
     )
     drugs.add_charge(-1, 0)
 
@@ -73,9 +81,8 @@ def add_drugs(
 
     # Saving the Trajectory and Topology so it can be loaded later,
     # for example, if the calculation is stopped and then resumed.
-    print(
-        "\nSaving small molecule trajectories and topologies"
-        f" in:\n'{directory}'"
+    logger.debug(
+        f"\nSaving small molecule trajectories and topologies in:\n'{directory}'"
     )
     traj.save_pdb(directory + "sm_drg_traj.pdb")
     top_df = top.to_dataframe()
@@ -97,8 +104,10 @@ class CGdrug:
         in_top,
         dist_threshold,
         distance,
+        verbosity,
     ):
 
+        self.verbosity = verbosity
         self.n_drugs = n_drugs
         self.n_components = n_components
         self.tot_atoms = n_drugs * n_components
@@ -117,32 +126,39 @@ class CGdrug:
         self.Ly = sim_box_data[1][1].value_in_unit(sim_box_unit)
         self.Lz = sim_box_data[2][2].value_in_unit(sim_box_unit)
 
-        x_coords = (self.Lx / 2 - (-self.Lx / 2)) * np.random.ranf(
-            int(n_drugs)
-        ) + (-self.Lx / 2)
-        y_coords = (self.Ly / 2 - (-self.Ly / 2)) * np.random.ranf(
-            int(n_drugs)
-        ) + (-self.Ly / 2)
+        x_coords = (self.Lx / 2 - (-self.Lx / 2)) * np.random.ranf(int(n_drugs)) + (
+            -self.Lx / 2
+        )
+        y_coords = (self.Ly / 2 - (-self.Ly / 2)) * np.random.ranf(int(n_drugs)) + (
+            -self.Ly / 2
+        )
         z_coords = (self.Lz - (0.0)) * np.random.ranf(int(n_drugs)) + (0.0)
         centers = np.vstack((x_coords, y_coords, z_coords)).T
 
         return centers
 
     def collision_check(self, dist_threshold):
-        print(
-            "Small drug particles generated. Starting protein collision"
-            " check.\n"
+
+        if self.verbosity[0] == logging.DEBUG:
+            verb = True
+        else:
+            verb = False
+
+        logger.info(
+            "Small drug particles generated."
+            " Starting protein collision check...\n"
         )
 
         t1 = time.time()
         changes = 0
         for aa_ind, aa_cord in enumerate(self.prot_traj.xyz[0]):
 
-            print(
-                f"Checking collisions with residue: {aa_ind+1} out of"
-                f" {len(self.prot_traj.xyz[0][:,0])} - Changes: {changes}",
-                end="\r",
-            )
+            if verb:
+                print(
+                    f"Checking collisions with residue: {aa_ind+1} out of"
+                    f" {len(self.prot_traj.xyz[0][:,0])} - Changes: {changes}",
+                    end="\r",
+                )
 
             for drug_ind, drug_coord in enumerate(self.description.items()):
 
@@ -150,9 +166,9 @@ class CGdrug:
                     dist = np.linalg.norm(part - aa_cord)
 
                     while dist <= dist_threshold:
-                        new_y_pos = (
-                            self.Ly / 2 - (-self.Ly / 2)
-                        ) * np.random.ranf(1) + (-self.Ly / 2)
+                        new_y_pos = (self.Ly / 2 - (-self.Ly / 2)) * np.random.ranf(
+                            1
+                        ) + (-self.Ly / 2)
 
                         # This won't work if we add more than two particles...
                         drug_coord[1]["coordinates"][0][1] = new_y_pos
@@ -162,12 +178,18 @@ class CGdrug:
                         changes += 1
 
         t2 = time.time()
-        print(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
+        logger.info(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
 
-    def _add_components(self, centers, n_comp, distance, dist_threshold):
+    def _add_components(
+        self,
+        centers,
+        n_comp,
+        distance,
+        dist_threshold,
+    ):
 
         # For now n_comp HAS TO BE 2 or this function will EXPLODE!
-        print("distance: ", distance)
+        logger.debug(f"distance: {distance}")
 
         self.description = {}
         for ind, center in enumerate(centers):
@@ -200,15 +222,11 @@ class CGdrug:
 
         for drug in range(self.tot_atoms):
             residue = self.top.add_residue(resname, chain)
-            self.top.add_atom(
-                resname, element=md.element.carbon, residue=residue
-            )
+            self.top.add_atom(resname, element=md.element.carbon, residue=residue)
 
         cntr = 0
         for i in range(self.n_drugs):
-            self.top.add_bond(
-                chain.atom(i + cntr), chain.atom((i + 1) + cntr), order=1
-            )
+            self.top.add_bond(chain.atom(i + cntr), chain.atom((i + 1) + cntr), order=1)
             cntr += 1
 
     def _create_trajectory(self):
