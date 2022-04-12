@@ -26,12 +26,12 @@ def add_drugs(
     in_top: md.Topology,
     in_traj: md.Trajectory,
     conc: float,
-    mass: float,
     dist_threshold: float,
-    drug_components: int,
+    drug_components: list,
     directory: str,
     comp_dist,
     verbosity,
+    residues,
 ):
     # Get verbosity level
     # logger.setLevel(verbosity[0])
@@ -43,30 +43,46 @@ def add_drugs(
     len_y = sim_box_data[1][1].value_in_unit(sim_box_unit)
     len_z = sim_box_data[2][2].value_in_unit(sim_box_unit)
 
+    # In nanometers
     sim_box_vol = len_x * len_y * len_z
 
-    logger.debug(f"mass: {mass}")
-    logger.debug(f"conc: {conc}")
+    # Converting the volume to liter
+    sim_box_vol_L = sim_box_vol * 1e-24
+    logger.debug(f"Simulation box volume: {sim_box_vol_L} L")
+    logger.debug(f"Small molecule concentration: {conc}")
+
+    # comp_molarmass = 0
+    # for drg_typ in drug_components:
+    #     mmass = residues.loc[residues["three"] == f"{drg_typ}"]["MW"][0]
+    #     comp_molarmass += mmass
+
+    #print("comp_molarmass: ", comp_molarmass, "g/mol")
 
     # TODO: Check this
     # Computing the total number of particles needed to fulfill
     # the given concentration.
     # mass / vol = conc -> mass = conc*vol
-    tot_mass = conc * sim_box_vol
-    num_part = int(tot_mass / mass)
+    # conc is in mmol/L
+    # sim_box_vol_L in L
+    # therefore, tot_mmol is mmol
+    tot_mmol = conc * sim_box_vol_L
+    print(f"Total mmols: {tot_mmol} mmol")
 
-    for part in range(num_part * 2):
-        system.addParticle(12 * unit.amu)
+    # Converting the total mmol to mol, and then to particles using the
+    # Avogadro's constant.
+    num_part = int((tot_mmol * 1e-3) * 6.02214076e23)
+    logger.debug(f"Number of particles:{num_part} particles.")
 
-    # Generating random coordinates array with the small particle random
-    # coordinates
-    # if drug_components == 1:
-
-    # coor_arr = gen_monovalent(len_x, len_y, len_z, num_part)
+    # Adding the small molecules to the system. Each AA has its own molecular
+    # weight.
+    for drg_typ in drug_components:
+        res_row = residues.loc[residues["three"] == f"{drg_typ}"]
+        for part in range(num_part):
+            system.addParticle(res_row["MW"][0] * unit.amu)
 
     drugs = CGdrug(
         n_drugs=num_part,
-        n_components=2,
+        n_components=drug_components,
         system=system,
         in_top=in_top,
         in_traj=in_traj,
@@ -74,7 +90,9 @@ def add_drugs(
         distance=comp_dist,
         verbosity=verbosity,
     )
-    drugs.add_charge(-1, 0)
+
+    # TODO: The add_charge function is unused.
+    # drugs.add_charge(-1, 0)
 
     traj = drugs.get_trajectory()
     top = drugs.get_topology()
@@ -110,9 +128,10 @@ class CGdrug:
         self.verbosity = verbosity
         self.n_drugs = n_drugs
         self.n_components = n_components
-        self.tot_atoms = n_drugs * n_components
+        self.tot_atoms = n_drugs * len(n_components)
         self.prot_traj = in_traj
         self.prot_top = in_top
+
         centers = self._gen_centers(n_drugs, system)
         self._add_components(centers, n_components, distance, dist_threshold)
         self._create_topology()
@@ -145,8 +164,7 @@ class CGdrug:
             verb = False
 
         logger.info(
-            "Small drug particles generated."
-            " Starting protein collision check...\n"
+            "Small drug particles generated. Starting protein collision check...\n"
         )
 
         t1 = time.time()
@@ -188,30 +206,52 @@ class CGdrug:
         dist_threshold,
     ):
 
-        # For now n_comp HAS TO BE 2 or this function will EXPLODE!
-        logger.debug(f"distance: {distance}")
+        if len(n_comp) == 2:
+            logger.debug(f"Detected 2 components: {n_comp}")
+            logger.debug(f"Distance between components: {distance}")
+            self.description = {}
+            for ind, center in enumerate(centers):
+                drug_coor = []
+                for i in [-1, 1]:
+                    comp_coor = [
+                        center[0] + ((distance / 2) * i),
+                        center[1],
+                        center[2],
+                    ]
+                    comp_coor = np.array(comp_coor)
+                    drug_coor.append(comp_coor)
 
-        self.description = {}
-        for ind, center in enumerate(centers):
-            drug_coor = []
-            for i in [-1, 1]:
+                self.description[ind] = {"coordinates": drug_coor}
+
+            coord_arr = []
+            for drug in self.description.values():
+                for coord in drug["coordinates"]:
+                    coord_arr.append(coord)
+            self.coord_arr_drg = np.array(coord_arr)
+
+        elif len(n_comp) == 1:
+            logger.debug(f"Detected 1 component: {n_comp}")
+
+            self.description = {}
+            for ind, center in enumerate(centers):
                 comp_coor = [
-                    center[0] + ((distance / 2) * i),
+                    center[0],
                     center[1],
                     center[2],
                 ]
-                comp_coor = np.array(comp_coor)
-                drug_coor.append(comp_coor)
 
-            self.description[ind] = {"coordinates": drug_coor}
+                self.description[ind] = {"coordinates": comp_coor}
 
-        coord_arr = []
-        for drug in self.description.values():
-            for coord in drug["coordinates"]:
-                coord_arr.append(coord)
-        coord_arr = np.array(coord_arr)
+            coord_arr = []
+            for drug in self.description.values():
+                coord_arr.append(drug["coordinates"])
+            self.coord_arr_drg = np.array(coord_arr)
 
-        self.collision_check(dist_threshold)
+        else:
+            logger.critical(f"{len(n_comp)} components not supported.")
+
+        logger.critical("Remember to delete this and reenable the collision check")
+        # self.collision_check(dist_threshold)
 
     def _create_topology(self):
 
@@ -225,20 +265,24 @@ class CGdrug:
             self.top.add_atom(resname, element=md.element.carbon, residue=residue)
 
         cntr = 0
-        for i in range(self.n_drugs):
-            self.top.add_bond(chain.atom(i + cntr), chain.atom((i + 1) + cntr), order=1)
-            cntr += 1
+        if len(self.n_components) == 2:
+            for i in range(self.n_drugs):
+                self.top.add_bond(
+                    chain.atom(i + cntr), chain.atom((i + 1) + cntr), order=1
+                )
+                cntr += 1
 
     def _create_trajectory(self):
 
-        coord_arr = []
+        # coord_arr = []
 
-        for drug in self.description.values():
-            for coord in drug["coordinates"]:
-                coord_arr.append(coord)
+        # for drug in self.description.values():
+        #     for coord in drug["coordinates"]:
+        #         coord_arr.append(coord)
 
-        coord_arr = np.array(coord_arr)
-        total_coords = np.vstack((self.prot_traj.xyz[0], coord_arr))
+        # coord_arr = np.array(coord_arr)
+
+        total_coords = np.vstack((self.prot_traj.xyz[0], self.coord_arr_drg))
 
         self.trajectory = md.Trajectory(
             total_coords,

@@ -1,17 +1,16 @@
-import logging
 import os
 import time
-from argparse import ArgumentParser
 
 import openmm
 import openmm.unit as unit
 from openmm import XmlSerializer, app
 
 import small_molecule as smol
+import utils as ut
 from analyse import *
 
 
-def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
+def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf):
 
     folder = name + "/{:d}/".format(temp)
     check_point = folder + "restart.chk"
@@ -65,7 +64,6 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
     system.setDefaultPeriodicBoxVectors(a, b, c)
 
     # Initial configuration
-    # TODO: Protein chains are randomly distributed here?
     xy = np.empty(0)
 
     # Generates a 1x2 vector with two x and y coordinates.
@@ -106,6 +104,8 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
     # Saving a .pdb file with the current configuration. This file has 100
     # protein strands spanning a long stretch of the z axis and completely
     # straight
+
+    # Storing the topology into a trajectory with one frae
     in_traj = md.Trajectory(
         np.array(pos).reshape(n_chains * N, 3),
         top,
@@ -114,6 +114,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
         [90, 90, 90],
     )
 
+    # Attempting to create directories in which to save the topology
     try:
         os.mkdir(f"./{name}")
     except FileExistsError:
@@ -125,12 +126,16 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
         pass
 
     logger.info(f"Storing files in {os.getcwd()}/{name}/{int(temp)}/")
+
     in_traj.save_pdb(f"./{name}/{int(temp)}/top.pdb")
     pdb = app.pdbfile.PDBFile(f"./{name}/{int(temp)}/top.pdb")
 
     # Adding finally the particles to the system, with their charge and a
     # term for compensating for the terminal residues (2 for a terminal NH2
     # and 16 for the deprotonated OH of the ending carbonyl group)
+
+    # TODO: Read mass from residues.csv in small_molecule.py
+
     for _ in range(n_chains):
         system.addParticle((residues.loc[prot.fasta[0]].MW + 2) * unit.amu)
         for a in prot.fasta[1:-1]:
@@ -143,7 +148,6 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
 
     # TODO: This should be defined in a separate input file and read as a dict
     # or be given as a parameter in the argument parser.
-    comp_dist = 0.5
 
     if not os.path.isfile(check_point):
 
@@ -152,6 +156,9 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
             # parameters. Maybe save the small molecule params in a csv file?
             smol_name = small_molec[0]
             smol_conc = float(small_molec[1])
+            comp_dist = float(small_molec[2])
+
+            drug_comp = smol_name.split("-")
 
             logger.info("\nAdding small molecules to the system...")
             # My function to add small particles to the system
@@ -159,13 +166,13 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
                 system=system,
                 in_traj=in_traj,
                 in_top=top,
-                conc=0.005,
-                mass=1,
+                conc=smol_conc,
                 dist_threshold=2,
-                drug_components=2,
+                drug_components=drug_comp,
                 directory=folder,
                 comp_dist=comp_dist,
                 verbosity=verbosity,
+                residues=residues
             )
 
             pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
@@ -187,6 +194,14 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
         in_traj = md.load(folder + "sm_drg_traj.pdb")
 
         pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
+
+        logger.critical(f"in_traj top: {in_traj.topology}")
+
+        with open(f"./{name}/{int(temp)}/system.xml", "r") as f:
+            system_ser = f.read()
+            system = XmlSerializer.deserialize(system_ser)
+
+        logger.critical(f"system num parts: {system.getNumParticles()}")
 
     #######
     # TODO: Add function or block of code to add coarse-grained chemical
@@ -225,6 +240,8 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
     ah.addPerParticleParameter("s")
     ah.addPerParticleParameter("l")
 
+    # This loop sets the parameters for the potentials of the AA of our main
+    # chains.
     for j in range(n_chains):
         begin = j * N
         end = j * N + N
@@ -256,39 +273,54 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
     # # the system. n_drugs (number of small molecules) by 2 (bimolecular).
     # TODO: Allow to choose which AA is used instead of just Glycine.
     if small_molec:
-        for i in range(n_drugs * 2):
 
-            # Yukawa Epsilon of the small molecules
-            yu.addParticle([0 * unit.nanometer * unit.kilojoules_per_mole])
-            ah.addParticle(
-                [
-                    residues.loc["G"].sigmas * unit.nanometer,
-                    residues.loc["G"].lambdas * unit.dimensionless,
-                ]
-            )
+        for type_drg in small_molec[0].split("-"):
+
+            # Finding the row of the AA corresponding to our type of molecule.
+            res_row = residues.loc[residues["three"] == f"{type_drg}"]
+
+            for i in range(n_drugs):
+
+                # Yukawa Epsilon of the small molecules
+                yu.addParticle(
+                    [res_row["q"][0] * unit.nanometer * unit.kilojoules_per_mole]
+                )
+                ah.addParticle(
+                    [
+                        res_row["sigmas"][0] * unit.nanometer,
+                        res_row["lambdas"][0] * unit.dimensionless,
+                    ]
+                )
 
         # Adding bonds between the small molecules.
-        for i in range(n_parts_old, n_parts_old + (n_drugs * 2) - 1):
-            # print(f"\nbond: {i}-{i+1}")
-            a = hb.addBond(
-                i,
-                i + 1,
-                comp_dist * unit.nanometer,
-                5000 * unit.kilojoules_per_mole / (unit.nanometer**2),
-            )
+        if len(small_molec[0].split("-")) == 2:
+            for i in range(
+                n_parts_old,
+                n_parts_old + (n_drugs * len(small_molec[0].split("-"))) - 1,
+            ):
+                # print(f"\nbond: {i}-{i+1}")
+                a = hb.addBond(
+                    i,
+                    i + 1,
+                    comp_dist * unit.nanometer,
+                    8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
+                )
 
-            # Important, this makes pair not affect eachother with non bonded
-            # potentials
-            yu.addExclusion(i, i + 1)
-            ah.addExclusion(i, i + 1)
+                # Important, this makes pair not affect eachother with non
+                # bonded potentials
+                yu.addExclusion(i, i + 1)
+                ah.addExclusion(i, i + 1)
 
     logger.debug(f"ah:, {ah.getNumParticles()}")
     logger.debug(f"yu:, {yu.getNumParticles()}")
 
+    logger.debug(pdb.topology)
+
     yu.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
     ah.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
     hb.setUsesPeriodicBoundaryConditions(True)
-    # tambe amunt
+
+    # TODO: Ask about the cutoff. Another line above.
     yu.setCutoffDistance(4 * unit.nanometer)
     ah.setCutoffDistance(4 * unit.nanometer)
 
@@ -303,21 +335,28 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
 
     integrator = openmm.openmm.LangevinIntegrator(
         temp * unit.kelvin, 0.01 / unit.picosecond, 0.005 * unit.picosecond
-    )  # 322
+    )
 
-    # Uses CUDA as the platform for the GPU calculations.
-    platform = openmm.Platform.getPlatformByName("CPU")
+    if platf:
+        platform = openmm.Platform.getPlatformByName("CPU")
+        platform_props = None
+        logger.info("Using CPU for the calculations.")
+    else:
+        # Uses CUDA as the platform for the GPU calculations.
+        platform = openmm.Platform.getPlatformByName("GPU")
+        platform_props = dict(CudaPrecision="mixed", DeviceIndex="0,1")
+        logger.info("Using GPU(s) for the calculations.")
 
     simulation = app.simulation.Simulation(
         pdb.topology,
         system,
         integrator,
         platform,
-        # dict(CudaPrecision="mixed", DeviceIndex="0,1"),
+        platformProperties=platform_props,
     )
 
     if os.path.isfile(check_point):
-        logger.info("\nResuming simulation from checkpoint file\n")
+        logger.info("\nResuming simulation from checkpoint file.\n")
         simulation.loadCheckpoint(check_point)
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
@@ -353,7 +392,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + "/{:d}/{:s}_report.dcd".format(temp, name),
-                int(10000),
+                int(1),
             )
         )
 
@@ -393,90 +432,12 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity):
     )
 
 
-def arg_parse():
-    parser = ArgumentParser()
-    parser.add_argument(
-        "--name",
-        "-n",
-        nargs=1,
-        type=str,
-        help="Name of the protein sequence to be simulated.",
-    )
-    parser.add_argument(
-        "--temp",
-        "-t",
-        nargs=1,
-        type=int,
-        help="Temperature (in K) of the system.",
-    )
-    parser.add_argument(
-        "--small-molec",
-        "-sm",
-        nargs=2,
-        type=str,
-        help="Name and concentration of the small molecules to be added.",
-    )
-
-    parser.add_argument(
-        "--hours",
-        "-th",
-        nargs="?",
-        default=20,
-        const=20,
-        type=int,
-        help="Number of hours to run the simulation. The default is 20h.",
-    )
-
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        help="increase output verbosity",
-        action="store_true",
-    )
-
-    parser.add_argument(
-        "-q",
-        "--quiet",
-        help="decrease output verbosity",
-        action="store_true",
-    )
-
-    parser.add_argument(
-        "--seconds",
-        "-tsec",
-        nargs="?",
-        default=0,
-        const=0,
-        type=int,
-        help="Number of seconds to run the simulation.",
-    )
-
-    args = parser.parse_args()
-
-    return args
-
-
 if __name__ == "__main__":
 
-    args = arg_parse()
+    args = ut.arg_parse()
 
-    fmt_str = "%(asctime)s - %(levelname)s:\n\t %(message)s"
-    if args.verbose and not args.quiet:
-        verb = logging.DEBUG
-        logging.basicConfig(level=verb, format=fmt_str)
-    elif args.quiet and not args.verbose:
-        verb = logging.ERROR
-        logging.basicConfig(level=verb, format=fmt_str)
-    else:
-        verb = logging.INFO
-        fmt_str = "%(message)s"
-        logging.basicConfig(level=verb, format=fmt_str)
-
-    verbosity = [verb, fmt_str]
-    # create logger
-    logger = logging.getLogger("main simulation")
-
-    simul_time = args.hours * 3600 + args.seconds
+    # Custom logger for easier debugging, using the python logging module.
+    logger, verbosity = ut.custom_logger(args)
 
     residues = pd.read_csv("residues.csv").set_index("three", drop=False)
     proteins = pd.read_pickle("proteins.pkl")
@@ -490,8 +451,9 @@ if __name__ == "__main__":
         prot=proteins.loc[args.name[0]],
         temp=args.temp[0],
         small_molec=args.small_molec,
-        sim_time=simul_time,
+        sim_time=args.time,
         verbosity=verbosity,
+        platf=args.cpu,
     )
 
     logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")
