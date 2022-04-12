@@ -343,7 +343,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
         logger.info("Using CPU for the calculations.")
     else:
         # Uses CUDA as the platform for the GPU calculations.
-        platform = openmm.Platform.getPlatformByName("GPU")
+        platform = openmm.Platform.getPlatformByName("CUDA")
         platform_props = dict(CudaPrecision="mixed", DeviceIndex="0,1")
         logger.info("Using GPU(s) for the calculations.")
 

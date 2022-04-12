@@ -50,5 +50,5 @@ To run simulations, execute the `simulate.py` script with your python environmen
 An example of a command to run a simulation:
 
 ```
-python3 simulate.py --name FUS --temp 323
+python3 simulate.py --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200
 ```
