@@ -392,7 +392,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + "/{:d}/{:s}_report.dcd".format(temp, name),
-                int(1),
+                int(10000),
             )
         )
 
