@@ -1,8 +1,9 @@
 FUS/
-/*.xml
+*.xml
+*.log
 /*.xyz
 /*.pdb
 __pycache__/
 paused_fus_prot_test.py
 test_openmm_local.py
-
+top
