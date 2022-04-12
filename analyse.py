@@ -1,9 +1,9 @@
-import pandas as pd
-import numpy as np
-import mdtraj as md
-import itertools
 import os
+
 import MDAnalysis
+import mdtraj as md
+import numpy as np
+import pandas as pd
 from MDAnalysis import transformations
 
 
