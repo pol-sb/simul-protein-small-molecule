@@ -56,7 +56,7 @@ def add_drugs(
     #     mmass = residues.loc[residues["three"] == f"{drg_typ}"]["MW"][0]
     #     comp_molarmass += mmass
 
-    #print("comp_molarmass: ", comp_molarmass, "g/mol")
+    # print("comp_molarmass: ", comp_molarmass, "g/mol")
 
     # TODO: Check this
     # Computing the total number of particles needed to fulfill
@@ -250,8 +250,8 @@ class CGdrug:
         else:
             logger.critical(f"{len(n_comp)} components not supported.")
 
-        logger.critical("Remember to delete this and reenable the collision check")
-        # self.collision_check(dist_threshold)
+        # logger.critical("Remember to delete this and reenable the collision check")
+        self.collision_check(dist_threshold)
 
     def _create_topology(self):
 
