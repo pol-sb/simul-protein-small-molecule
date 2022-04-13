@@ -66,12 +66,12 @@ def add_drugs(
     # sim_box_vol_L in L
     # therefore, tot_mmol is mmol
     tot_mmol = conc * sim_box_vol_L
-    print(f"Total mmols: {tot_mmol} mmol")
+    logger.debug(f"Total mmols: {tot_mmol} mmol")
 
     # Converting the total mmol to mol, and then to particles using the
     # Avogadro's constant.
     num_part = int((tot_mmol * 1e-3) * 6.02214076e23)
-    logger.debug(f"Number of particles:{num_part} particles.")
+    logger.info(f"Generating {num_part} particles.")
 
     # Adding the small molecules to the system. Each AA has its own molecular
     # weight.
@@ -250,8 +250,8 @@ class CGdrug:
         else:
             logger.critical(f"{len(n_comp)} components not supported.")
 
-        # logger.critical("Remember to delete this and reenable the collision check")
-        self.collision_check(dist_threshold)
+        logger.critical("Remember to delete this and reenable the collision check")
+        #self.collision_check(dist_threshold)
 
     def _create_topology(self):
 

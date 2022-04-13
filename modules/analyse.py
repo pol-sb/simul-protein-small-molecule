@@ -148,9 +148,11 @@ def genParamsDH(df, name, prot, temp):
         + 0.1417 * 1e-2 * T * T
         - 0.8292 * 1e-6 * T**3
     )
+
     epsw = fepsw(temp)
     lB = 1.6021766**2 / (4 * np.pi * 8.854188 * epsw) * 6.022 * 1000 / kT
     yukawa_eps = [r.loc[a].q * np.sqrt(lB * kT) for a in fasta]
+
     # Calculate the inverse of the Debye length
     yukawa_kappa = np.sqrt(8 * np.pi * lB * prot.ionic * 6.022 / 10)
     return yukawa_eps, yukawa_kappa
@@ -257,6 +259,7 @@ def genDCD(residues, name, prot, temp, n_chains):
         name + "/{:d}".format(temp) + "/traj.dcd",
         top=name + "/{:d}".format(temp) + "/top.pdb",
     )
+
     h = np.apply_along_axis(lambda a: np.histogram(a, bins=edges)[0], 1, t.xyz[:, :, 2])
     np.save("{:s}_{:d}.npy".format(name, temp), h, allow_pickle=False)
     os.remove(name + "/{:d}".format(temp) + "/traj1.dcd")

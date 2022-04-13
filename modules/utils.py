@@ -19,7 +19,7 @@ def arg_parse():
         help="Temperature (in K) of the system.",
     )
     parser.add_argument(
-        "--small-molec",
+        "--small_molec",
         "-sm",
         nargs=3,
         type=str,

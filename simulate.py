@@ -5,15 +5,15 @@ import openmm
 import openmm.unit as unit
 from openmm import XmlSerializer, app
 
-import small_molecule as smol
-import utils as ut
-from analyse import *
+import modules.small_molecule as smol
+import modules.utils as ut
+from modules.analyse import *
 
 
-def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf):
+def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
 
     folder = name + "/{:d}/".format(temp)
-    check_point = folder + "restart.chk"
+    check_point = folder + f"{name}_{temp}_{sm_mol[0]}_restart.chk"
 
     residues = residues.set_index("one")
 
@@ -134,7 +134,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
     # term for compensating for the terminal residues (2 for a terminal NH2
     # and 16 for the deprotonated OH of the ending carbonyl group)
 
-    # TODO: Read mass from residues.csv in small_molecule.py
+    # TODO: Read mass from residues.csv in sm_molule.py
 
     for _ in range(n_chains):
         system.addParticle((residues.loc[prot.fasta[0]].MW + 2) * unit.amu)
@@ -151,12 +151,12 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
 
     if not os.path.isfile(check_point):
 
-        if small_molec:
-            # TODO: Use these variables in the small_molec function to get
+        if sm_mol:
+            # TODO: Use these variables in the sm_mol function to get
             # parameters. Maybe save the small molecule params in a csv file?
-            smol_name = small_molec[0]
-            smol_conc = float(small_molec[1])
-            comp_dist = float(small_molec[2])
+            smol_name = sm_mol[0]
+            smol_conc = float(sm_mol[1])
+            comp_dist = float(sm_mol[2])
 
             drug_comp = smol_name.split("-")
 
@@ -172,7 +172,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
                 directory=folder,
                 comp_dist=comp_dist,
                 verbosity=verbosity,
-                residues=residues
+                residues=residues,
             )
 
             pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
@@ -272,9 +272,9 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
     # Adding the small drug particles to the CustomNonbondedForce used in
     # # the system. n_drugs (number of small molecules) by 2 (bimolecular).
     # TODO: Allow to choose which AA is used instead of just Glycine.
-    if small_molec:
+    if sm_mol:
 
-        for type_drg in small_molec[0].split("-"):
+        for type_drg in sm_mol[0].split("-"):
 
             # Finding the row of the AA corresponding to our type of molecule.
             res_row = residues.loc[residues["three"] == f"{type_drg}"]
@@ -293,10 +293,10 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
                 )
 
         # Adding bonds between the small molecules.
-        if len(small_molec[0].split("-")) == 2:
+        if len(sm_mol[0].split("-")) == 2:
             for i in range(
                 n_parts_old,
-                n_parts_old + (n_drugs * len(small_molec[0].split("-"))) - 1,
+                n_parts_old + (n_drugs * len(sm_mol[0].split("-"))) - 1,
             ):
                 # print(f"\nbond: {i}-{i+1}")
                 a = hb.addBond(
@@ -329,7 +329,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
     system.addForce(ah)
 
     serialized_system = XmlSerializer.serialize(system)
-    outfile = open(f"./{name}/{int(temp)}/system.xml", "w")
+    outfile = open(f"./{name}/{int(temp)}/{name}_{temp}_{sm_mol[0]}_system.xml", "w")
     outfile.write(serialized_system)
     outfile.close()
 
@@ -391,7 +391,7 @@ def simulate(residues, name, prot, temp, small_molec, sim_time, verbosity, platf
         # iteration 1 to have the parameters for the DCD
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
-                name + "/{:d}/{:s}_report.dcd".format(temp, name),
+                name + f"/{temp}/{name}_{temp}_{sm_mol[0]}_report.dcd",
                 int(10000),
             )
         )
@@ -439,8 +439,8 @@ if __name__ == "__main__":
     # Custom logger for easier debugging, using the python logging module.
     logger, verbosity = ut.custom_logger(args)
 
-    residues = pd.read_csv("residues.csv").set_index("three", drop=False)
-    proteins = pd.read_pickle("proteins.pkl")
+    residues = pd.read_csv("./data/residues.csv").set_index("three", drop=False)
+    proteins = pd.read_pickle("./data/proteins.pkl")
 
     logger.info(f"\nWorking with protein {args.name[0]} at {args.temp[0]} K.")
 
@@ -450,7 +450,7 @@ if __name__ == "__main__":
         name=args.name[0],
         prot=proteins.loc[args.name[0]],
         temp=args.temp[0],
-        small_molec=args.small_molec,
+        sm_mol=args.small_molec,
         sim_time=args.time,
         verbosity=verbosity,
         platf=args.cpu,
