@@ -250,8 +250,8 @@ class CGdrug:
         else:
             logger.critical(f"{len(n_comp)} components not supported.")
 
-        logger.critical("Remember to delete this and reenable the collision check")
-        #self.collision_check(dist_threshold)
+        #logger.critical("Remember to delete this and reenable the collision check")
+        self.collision_check(dist_threshold)
 
     def _create_topology(self):
 
