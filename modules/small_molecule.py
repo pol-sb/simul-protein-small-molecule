@@ -51,10 +51,9 @@ def add_drugs(
     logger.debug(f"Simulation box volume: {sim_box_vol_L} L")
     logger.debug(f"Small molecule concentration: {conc}")
 
-    # comp_molarmass = 0
-    # for drg_typ in drug_components:
-    #     mmass = residues.loc[residues["three"] == f"{drg_typ}"]["MW"][0]
-    #     comp_molarmass += mmass
+    for drg_typ in drug_components:
+        lam = residues.loc[residues["three"] == f"{drg_typ}"]["lambdas"][0]
+        logger.info(f"Component {drg_typ} with lambda: {lam}")
 
     # print("comp_molarmass: ", comp_molarmass, "g/mol")
 
