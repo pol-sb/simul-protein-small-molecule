@@ -4,21 +4,24 @@ from argparse import ArgumentParser
 
 def arg_parse():
     parser = ArgumentParser()
-    parser.add_argument(
+
+    g1 = parser.add_argument_group("Mandatory simulation parameters")
+
+    g1.add_argument(
         "--name",
-        "-n",
+        "-N",
         nargs=1,
         type=str,
         help="Name of the protein sequence to be simulated.",
     )
-    parser.add_argument(
+    g1.add_argument(
         "--temp",
         "-T",
         nargs=1,
         type=int,
         help="Temperature (in K) of the system.",
     )
-    parser.add_argument(
+    g1.add_argument(
         "--small_molec",
         "-sm",
         nargs=3,
@@ -30,29 +33,42 @@ def arg_parse():
         ),
     )
 
-    parser.add_argument(
+    g1.add_argument(
         "-v",
         "--verbose",
         help="Increase output verbosity",
         action="store_true",
     )
 
-    parser.add_argument(
+    g1.add_argument(
         "-q",
         "--quiet",
         help="Decrease output verbosity",
         action="store_true",
     )
 
-    parser.add_argument(
+    g1.add_argument(
         "--cpu",
         help="Use only the CPU as platform for the openmm.simulation.",
         action="store_true",
     )
 
-    parser.add_argument(
+    g2 = parser.add_argument_group("Simulation time selection.")
+    g2_1 = g2.add_mutually_exclusive_group(required=True)
+
+    g2_1.add_argument(
+        "--nsteps",
+        "--steps",
+        "-n",
+        nargs="?",
+        const=0,
+        type=int,
+        help="Number of timesteps to run the simulation.",
+    )
+
+    g2_1.add_argument(
         "--time",
-        "-tsec",
+        "--tsec",
         "-t",
         nargs="?",
         const=0,

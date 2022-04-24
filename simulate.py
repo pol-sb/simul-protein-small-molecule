@@ -384,7 +384,18 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
             f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
         )
 
-        logger.info(f"\nRunning simulation for {sim_time} s.")
+        # This conditional block checks the simulation time format given,
+        # allowing to simulate a certain number of seconds or a number of
+        # timesteps.
+        if sim_time[0] and not sim_time[1]:
+            sim_time = sim_time[0]
+            time_type = "seconds"
+
+        elif sim_time[1] and not sim_time[0]:
+            sim_time = sim_time[1]
+            time_type = "iterations"
+
+        logger.info(f"\nRunning simulation for {sim_time} {time_type}.")
 
         # TODO: Make this a DCD Reporter when the program works okay.
         # If this is made  DCD Reporter, I should create a PDB file at
@@ -410,15 +421,30 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
         )
     )
 
-    # Defines total runtime and checkpoint save interval?
-    # Initial runtime was 20h.
     # The checkpoint save time scales with the simulation length. The interval
     # can be adjusted.
-    simulation.runForClockTime(
-        sim_time * unit.second,
-        checkpointFile=check_point,
-        checkpointInterval=sim_time * 0.06 * unit.second,
-    )
+    # Initial runtime was 20h.
+    if time_type == "seconds":
+        simulation.runForClockTime(
+            sim_time * unit.second,
+            checkpointFile=check_point,
+            checkpointInterval=sim_time * 0.06 * unit.second,
+        )
+
+    # Alternative method of running the simulation
+    elif time_type == "iterations":
+
+        # Adding a checkpoint reporter manually, as the step method does not
+        # have an option to automatically add the reporter.
+        simulation.reporters.append(
+            app.CheckpointReporter(
+                file=check_point,
+                reportInterval=sim_time * 0.05,
+            )
+        )
+
+        # Running the simulations for the given timesteps.
+        simulation.step(sim_time)
 
     # Saves checkpoint file
     simulation.saveCheckpoint(check_point)
@@ -451,7 +477,7 @@ if __name__ == "__main__":
         prot=proteins.loc[args.name[0]],
         temp=args.temp[0],
         sm_mol=args.small_molec,
-        sim_time=args.time,
+        sim_time=[args.time, args.nsteps],
         verbosity=verbosity,
         platf=args.cpu,
     )

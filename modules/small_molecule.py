@@ -57,7 +57,6 @@ def add_drugs(
 
     # print("comp_molarmass: ", comp_molarmass, "g/mol")
 
-    # TODO: Check this
     # Computing the total number of particles needed to fulfill
     # the given concentration.
     # mass / vol = conc -> mass = conc*vol
@@ -249,8 +248,8 @@ class CGdrug:
         else:
             logger.critical(f"{len(n_comp)} components not supported.")
 
-        #logger.critical("Remember to delete this and reenable the collision check")
-        self.collision_check(dist_threshold)
+        logger.critical("Remember to delete this and reenable the collision check")
+        # self.collision_check(dist_threshold)
 
     def _create_topology(self):
 
