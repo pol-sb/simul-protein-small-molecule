@@ -203,18 +203,6 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
 
         logger.critical(f"system num parts: {system.getNumParticles()}")
 
-    #######
-    # TODO: Add function or block of code to add coarse-grained chemical
-    # compounds here.
-    #
-    # Initially they must be monovalent compounds (just one particle) without
-    # charge, but this should be able to be changed. We will do bivalent
-    # compounds with charge eventually.
-    #
-    # How many particles will be set with the concentration MUST be able
-    # to be changed to make several tests.
-    #######
-
     # Adding a regular harmonic bond force
     hb = openmm.openmm.HarmonicBondForce()
 
@@ -397,9 +385,6 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
 
         logger.info(f"\nRunning simulation for {sim_time} {time_type}.")
 
-        # TODO: Make this a DCD Reporter when the program works okay.
-        # If this is made  DCD Reporter, I should create a PDB file at
-        # iteration 1 to have the parameters for the DCD
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + f"/{temp}/{name}_{temp}_{sm_mol[0]}_report.dcd",
@@ -416,6 +401,7 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
             temperature=True,
             step=True,
             speed=True,
+            volume=True,
             elapsedTime=True,
             separator="\t",
         )
