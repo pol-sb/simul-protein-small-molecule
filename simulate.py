@@ -51,7 +51,7 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
     system = openmm.System()
 
     # Set box vectors
-    # The following block of code defines the size of each vector of the slab
+    # The following lines define the size of each vector of the slab
     # that makes up our system.
     a = unit.Quantity(np.zeros([3]), unit.nanometers)
     a[0] = L * unit.nanometers
@@ -105,7 +105,7 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
     # protein strands spanning a long stretch of the z axis and completely
     # straight
 
-    # Storing the topology into a trajectory with one frae
+    # Storing the topology into a trajectory with one frame
     in_traj = md.Trajectory(
         np.array(pos).reshape(n_chains * N, 3),
         top,

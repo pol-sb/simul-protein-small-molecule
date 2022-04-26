@@ -4,8 +4,10 @@ import numpy as np
 import os
 import sys
 
+ASP_RAT_MOD = 1.25
 
-def get_trajectory():
+
+def get_trajectory(stride):
     sim_path = os.getcwd()
     sim_name = [f for f in os.listdir(sim_path) if f.endswith("report.dcd")]
 
@@ -21,15 +23,15 @@ def get_trajectory():
     t = md.load(
         f"{sim_path}/{sim_name[0]}",
         top=f"{sim_path}/final_system_state.pdb",
+        stride=stride,
     )[0:]
     print(" - DONE")
 
     return t, sim_name
 
 
-def create_histogram(z, dens):
+def create_histogram(z, dens, z_lim):
 
-    z_lim = 75
     # z_lim = max([abs(np.min(z)), abs(np.max(z))])*1.25
 
     print("\n  [*] Creating histogram", end="")
@@ -43,11 +45,13 @@ def create_histogram(z, dens):
 def prepare_profile(traj, sim_name):
 
     z = traj.xyz[:, :, 2]
-    print('zmax: ', z.max())
-    print('zmin: ', z.min())
-    quit()
+    box_z_length = traj.unitcell_lengths[0][2]
     dens = []
     dens_drg = []
+
+    # print("zmax: ", z.max())
+    # print("zmin: ", z.min())
+    # quit()
 
     # Check if the last chain is the DRG chain
     # assert np.all(traj.top.select("chainid 100") == traj.top.select("resname DRG"))
@@ -56,7 +60,7 @@ def prepare_profile(traj, sim_name):
     if len(drg) == 0:
         print("\n  [*] Centering trajectory", end="")
 
-        z -= z.mean(1, keepdims=True)
+        z -= z.median(1, keepdims=True)
         print(" - DONE")
 
         S = traj.unitcell_lengths[0, 0] ** 2
@@ -78,21 +82,26 @@ def prepare_profile(traj, sim_name):
 
         z_prot = z[:, 0 : drg[0]]
         z_drg = z[:, drg]
-        z_prot_mean = z_prot.mean(1, keepdims=True)
+
+        # Computing the median which will be used to center our plots. The
+        # median is used as it is more robust against outliers than the mean.
+        z_prot_mean = np.median(z_prot, 1, keepdims=True)
         z -= z_prot_mean
+        z = (z + box_z_length / 2) % box_z_length - box_z_length / 2
+
+        z_prot = z[:, 0 : drg[0]]
+        z_drg = z[:, drg]
+
         print(" - DONE")
 
-        S = traj.unitcell_lengths[0, 0] ** 2
+        # S = traj.unitcell_lengths[0, 0] ** 2
 
-        dens = create_histogram(z_prot, dens)
+        dens = create_histogram(z_prot, dens, z_lim=75)
 
-        dens_drg = create_histogram(z_drg, dens_drg)
-
-        # for zi in z_chains:
-        #    print(zi.shape)
-        #    break
+        dens_drg = create_histogram(z_drg, dens_drg, z_lim=75)
 
         dens = np.array(dens)
+        dens_drg = np.array(dens_drg)
 
         dens_ext_bottom = dens.shape[0]
 
@@ -104,10 +113,10 @@ def prepare_profile(traj, sim_name):
         plt_prot.set_xlabel("z")
         plt_prot.set_ylabel("time")
         plt_prot.set_title(sim_name[0][:-11] + "_prot")
-        a = plt_prot.imshow(
+        im1 = plt_prot.imshow(
             dens,
-            aspect=(dens.shape[1] / dens.shape[0]) * 0.9,
-            cmap="plasma",
+            aspect=(dens.shape[1] / dens.shape[0]) * ASP_RAT_MOD,
+            cmap="viridis",
             # vmax=abs(dens).max(),
             # vmin=-abs(dens).max(),
             extent=[-75, 75, dens_ext_bottom, 0],
@@ -119,20 +128,21 @@ def prepare_profile(traj, sim_name):
             sim_name[0][:-11] + "_drg\n" + r"$\lambda =$" + f"{lmbda_val}"
         )
 
-        plt_drg.imshow(
+        im2 = plt_drg.imshow(
             dens_drg,
-            aspect=(dens.shape[1] / dens.shape[0]) * 0.9,
-            cmap="plasma",
+            aspect=(dens.shape[1] / dens.shape[0]) * ASP_RAT_MOD,
+            cmap="viridis",
             extent=[-75, 75, dens_ext_bottom, 0],
         )
-
-        plt.tight_layout()
+        fig.colorbar(im1, ax=plt_prot, shrink=0.5, pad=0.025)
+        fig.colorbar(im2, ax=plt_drg, shrink=0.5, pad=0.025)
+        fig.tight_layout(pad=1.5)
         plt.savefig(
             f'{sim_name[0][:-11]}_lmbda-{lmbda_val.replace(".","")}_densprof.png',
-            dpi=200,
+            dpi=250,
         )
 
 
 if __name__ == "__main__":
-    traj, s_name = get_trajectory()
+    traj, s_name = get_trajectory(stride=None)
     prepare_profile(traj, s_name)
