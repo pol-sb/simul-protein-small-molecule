@@ -66,7 +66,7 @@ def prepare_profile(traj, sim_name):
         S = traj.unitcell_lengths[0, 0] ** 2
 
         dens = create_histogram(z, dens, z_lim=Z_LIM)
-        dens = np.array()
+        dens = np.array(dens)
 
         dens_filename = f"avgdens_frame_prot_{sim_name[0][:-11]}.out"
 
