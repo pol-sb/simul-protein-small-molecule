@@ -56,12 +56,24 @@ def prepare_profile(traj, sim_name):
     if len(drg) == 0:
         print("\n  [*] Centering trajectory", end="")
 
-        z -= z.median(1, keepdims=True)
+        z -= np.median(z_prot, 1, keepdims=True)
+        z = (z + box_z_length / 2) % box_z_length - box_z_length / 2
+
         print(" - DONE")
 
         S = traj.unitcell_lengths[0, 0] ** 2
 
         dens = create_histogram(z, dens)
+
+        dens_filename = f"avgdens_frame_prot_{sim_name[0][:-11]}.out"
+
+        dens_ext_bottom = dens.shape[0]
+
+        # Saving density average for each frame into a file so it can
+        # be used later for plotting.
+        dens_avg = np.mean(dens[250:, :], axis=0)
+        dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
+        np.savetxt(dens_filename, dens_avg_dat)
 
         plt.xlabel("z")
         plt.ylabel("time")
