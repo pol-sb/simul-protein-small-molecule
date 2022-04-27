@@ -12,9 +12,6 @@ from modules.analyse import *
 
 def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
 
-    folder = name + "/{:d}/".format(temp)
-    check_point = folder + f"{name}_{temp}_{sm_mol[0]}_restart.chk"
-
     residues = residues.set_index("one")
 
     # Generates the parameters for the LJ interaction using values in the
@@ -124,6 +121,9 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
         os.mkdir(f"./{name}/{int(temp)}/")
     except FileExistsError:
         pass
+
+    folder = name + "/{:d}/".format(temp)
+    check_point = folder + f"{name}_{temp}_{sm_mol[0]}_restart.chk"
 
     logger.info(f"Storing files in {os.getcwd()}/{name}/{int(temp)}/")
 
