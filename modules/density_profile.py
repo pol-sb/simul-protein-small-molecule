@@ -7,6 +7,7 @@ import sys
 ASP_RAT_MOD = 1.25
 Z_LIM = 75
 
+
 def get_trajectory(stride):
     sim_path = os.getcwd()
     sim_name = [f for f in os.listdir(sim_path) if f.endswith("report.dcd")]
@@ -65,6 +66,7 @@ def prepare_profile(traj, sim_name):
         S = traj.unitcell_lengths[0, 0] ** 2
 
         dens = create_histogram(z, dens, z_lim=Z_LIM)
+        dens = np.array()
 
         dens_filename = f"avgdens_frame_prot_{sim_name[0][:-11]}.out"
 
@@ -79,7 +81,12 @@ def prepare_profile(traj, sim_name):
         plt.xlabel("z")
         plt.ylabel("time")
         plt.title(sim_name[0][:-11] + "_prot")
-        plt.imshow(dens, aspect=0.1, cmap="plasma")
+        plt.imshow(
+            dens,
+            aspect=0.1,
+            cmap="viridis",
+            extent=[-Z_LIM, Z_LIM, dens_ext_bottom, 0],
+        )
         plt.tight_layout()
         plt.savefig(f"{sim_name[0][:-11]}_NODRG_densprof.png", dpi=400)
 
