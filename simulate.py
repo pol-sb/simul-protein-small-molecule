@@ -397,12 +397,21 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
 
         logger.info(f"\nRunning simulation for {sim_time} {time_type}.")
 
-        simulation.reporters.append(
-            app.dcdreporter.DCDReporter(
-                name + f"/{temp}/{name}_{temp}_{sm_mol[0]}_report.dcd",
-                int(50000),
+        try:
+            simulation.reporters.append(
+                app.dcdreporter.DCDReporter(
+                    name + f"/{temp}/{name}_{temp}_{sm_mol[0]}_report.dcd",
+                    int(50000),
+                )
             )
-        )
+
+        except TypeError:
+            simulation.reporters.append(
+                app.dcdreporter.DCDReporter(
+                    name + f"/{temp}/{name}_{temp}_NODRG_report.dcd",
+                    int(50000),
+                )
+            )
 
     # Generates log file with information
     simulation.reporters.append(
