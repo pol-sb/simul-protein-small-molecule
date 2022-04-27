@@ -53,10 +53,11 @@ def prepare_profile(traj, sim_name):
     # assert np.all(traj.top.select("chainid 100") == traj.top.select("resname DRG"))
 
     drg = traj.top.select("resname DRG")
+
     if len(drg) == 0:
         print("\n  [*] Centering trajectory", end="")
 
-        z -= np.median(z_prot, 1, keepdims=True)
+        z -= np.median(z, 1, keepdims=True)
         z = (z + box_z_length / 2) % box_z_length - box_z_length / 2
 
         print(" - DONE")
