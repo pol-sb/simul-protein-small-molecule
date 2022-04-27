@@ -68,7 +68,7 @@ def prepare_profile(traj, sim_name):
         dens = create_histogram(z, dens, z_lim=Z_LIM)
         dens = np.array(dens)
 
-        dens_filename = f"avgdens_frame_prot_{sim_name[0][:-11]}.out"
+        dens_filename = f"avgdens_frame_prot_{sim_name[0][:-11]}_NODRG.out"
 
         dens_ext_bottom = dens.shape[0]
 
