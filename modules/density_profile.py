@@ -49,10 +49,6 @@ def prepare_profile(traj, sim_name):
     dens = []
     dens_drg = []
 
-    # print("zmax: ", z.max())
-    # print("zmin: ", z.min())
-    # quit()
-
     # Check if the last chain is the DRG chain
     # assert np.all(traj.top.select("chainid 100") == traj.top.select("resname DRG"))
 
@@ -97,13 +93,23 @@ def prepare_profile(traj, sim_name):
         # S = traj.unitcell_lengths[0, 0] ** 2
 
         dens = create_histogram(z_prot, dens, z_lim=75)
-
         dens_drg = create_histogram(z_drg, dens_drg, z_lim=75)
 
         dens = np.array(dens)
         dens_drg = np.array(dens_drg)
 
+        dens_filename = (
+            f"avgdens_frame_prot_{sim_name[0][:-11]}_lmbda-"
+            f'{lmbda_val.replace(".","")}.out'
+        )
+
         dens_ext_bottom = dens.shape[0]
+
+        # Saving density average for each frame into a file so it can
+        # be used later for plotting.
+        dens_avg = np.mean(dens[250:, :], axis=0)
+        dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
+        np.savetxt(dens_filename, dens_avg_dat)
 
         fig, ax = plt.subplots(ncols=2)
 
@@ -139,7 +145,7 @@ def prepare_profile(traj, sim_name):
         fig.tight_layout(pad=1.5)
         plt.savefig(
             f'{sim_name[0][:-11]}_lmbda-{lmbda_val.replace(".","")}_densprof.png',
-            dpi=250,
+            dpi=400,
         )
 
 
