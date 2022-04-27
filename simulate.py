@@ -321,7 +321,15 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
     system.addForce(ah)
 
     serialized_system = XmlSerializer.serialize(system)
-    outfile = open(f"./{name}/{int(temp)}/{name}_{temp}_{sm_mol[0]}_system.xml", "w")
+    try:
+        outfile = open(
+            f"./{name}/{int(temp)}/{name}_{temp}_{sm_mol[0]}_system.xml", "w"
+        )
+    except TypeError:
+        outfile = open(
+            f"./{name}/{int(temp)}/{name}_{temp}_NODRG_system.xml", "w"
+        )
+
     outfile.write(serialized_system)
     outfile.close()
 
