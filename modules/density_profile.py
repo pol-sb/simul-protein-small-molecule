@@ -6,7 +6,7 @@ import sys
 
 ASP_RAT_MOD = 1.25
 Z_LIM = 75
-EQUIL_TIME = 1500
+EQUIL_TIME = 500
 
 
 def get_trajectory(stride):
