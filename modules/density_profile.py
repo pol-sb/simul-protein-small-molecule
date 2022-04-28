@@ -6,6 +6,7 @@ import sys
 
 ASP_RAT_MOD = 1.25
 Z_LIM = 75
+EQUIL_TIME = 1500
 
 
 def get_trajectory(stride):
@@ -74,7 +75,7 @@ def prepare_profile(traj, sim_name):
 
         # Saving density average for each frame into a file so it can
         # be used later for plotting.
-        dens_avg = np.mean(dens[250:, :], axis=0)
+        dens_avg = np.mean(dens[EQUIL_TIME:, :], axis=0)
         dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
         np.savetxt(dens_filename, dens_avg_dat)
 
@@ -127,7 +128,7 @@ def prepare_profile(traj, sim_name):
 
         # Saving density average for each frame into a file so it can
         # be used later for plotting.
-        dens_avg = np.mean(dens[250:, :], axis=0)
+        dens_avg = np.mean(dens[EQUIL_TIME:, :], axis=0)
         dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
         np.savetxt(dens_filename, dens_avg_dat)
 
