@@ -10,9 +10,22 @@ import modules.utils as ut
 from modules.analyse import *
 
 
-def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
+def simulate(
+    residues,
+    name,
+    prot,
+    temp,
+    sm_mol,
+    sim_time,
+    verbosity,
+    platf,
+    check_collision,
+    lambd_override,
+    sigma_override,
+    mass_override,
+):
 
-    folder = name + "/{:d}/".format(temp)
+    folder = name + f"/{int(temp)}/"
 
     try:
         check_point = folder + f"{name}_{temp}_{sm_mol[0]}_restart.chk"
@@ -166,7 +179,7 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
 
             logger.info("\nAdding small molecules to the system...")
             # My function to add small particles to the system
-            in_traj, top, system, n_drugs = smol.add_drugs(
+            in_traj, top, system, n_drugs, drg_param = smol.add_drugs(
                 system=system,
                 in_traj=in_traj,
                 in_top=top,
@@ -177,6 +190,9 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
                 comp_dist=comp_dist,
                 verbosity=verbosity,
                 residues=residues,
+                col_chk_flag=check_collision,
+                lambd_override=lambd_override,
+                mass_override=mass_override,
             )
 
             pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
@@ -201,12 +217,15 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
 
         logger.critical(f"in_traj top: {in_traj.topology}")
 
-        with open(f"./{name}/{int(temp)}/system.xml", "r") as f:
+        with open(
+            f"./{name}/{int(temp)}/{name}_{temp}_{sm_mol[0]}_system.xml", "r"
+        ) as f:
             system_ser = f.read()
             system = XmlSerializer.deserialize(system_ser)
 
-        logger.critical(f"system num parts: {system.getNumParticles()}")
+        logger.debug(f"system num parts: {system.getNumParticles()}")
 
+    logger.info("\nSetting bonded and non-bonded interactions...")
     # Adding a regular harmonic bond force
     hb = openmm.openmm.HarmonicBondForce()
 
@@ -266,10 +285,24 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
     # TODO: Allow to choose which AA is used instead of just Glycine.
     if sm_mol:
 
-        for type_drg in sm_mol[0].split("-"):
+        for drg_ind, type_drg in enumerate(sm_mol[0].split("-")):
 
             # Finding the row of the AA corresponding to our type of molecule.
             res_row = residues.loc[residues["three"] == f"{type_drg}"]
+
+            if lambd_override or lambd_override == 0:
+                lambdas = lambd_override[drg_ind]
+                logger.info(f"For {type_drg} using non-default lambda: {lambdas}")
+            else:
+                lambdas = res_row["lambdas"][0]
+                logger.info(f"For {type_drg} using default lambda: {lambdas}")
+
+            if sigma_override or sigma_override == 0:
+                sigma = sigma_override[drg_ind]
+                logger.info(f"For {type_drg} using non-default sigma: {sigma}")
+            else:
+                sigma = res_row["sigmas"][0]
+                logger.info(f"For {type_drg} using default sigma: {sigma}")
 
             for i in range(n_drugs):
 
@@ -279,8 +312,8 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
                 )
                 ah.addParticle(
                     [
-                        res_row["sigmas"][0] * unit.nanometer,
-                        res_row["lambdas"][0] * unit.dimensionless,
+                        sigma * unit.nanometer,
+                        lambdas * unit.dimensionless,
                     ]
                 )
 
@@ -321,14 +354,11 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
     system.addForce(ah)
 
     serialized_system = XmlSerializer.serialize(system)
+
     try:
-        outfile = open(
-            f"./{name}/{int(temp)}/{name}_{temp}_{sm_mol[0]}_system.xml", "w"
-        )
+        outfile = open(f"./{folder}{name}_{temp}_{sm_mol[0]}_system.xml", "w")
     except TypeError:
-        outfile = open(
-            f"./{name}/{int(temp)}/{name}_{temp}_NODRG_system.xml", "w"
-        )
+        outfile = open(f"./{folder}{name}_{temp}_NODRG_system.xml", "w")
 
     outfile.write(serialized_system)
     outfile.close()
@@ -340,12 +370,34 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
     if platf:
         platform = openmm.Platform.getPlatformByName("CPU")
         platform_props = None
-        logger.info("Using CPU for the calculations.")
+        logger.info("\nUsing CPU for the calculations.")
     else:
         # Uses CUDA as the platform for the GPU calculations.
         platform = openmm.Platform.getPlatformByName("CUDA")
         platform_props = dict(CudaPrecision="mixed", DeviceIndex="0,1")
         logger.info("Using GPU(s) for the calculations.")
+
+    # This conditional block checks the simulation time format given,
+    # allowing to simulate a certain number of seconds or a number of
+    # timesteps.
+    if sim_time[0] and not sim_time[1]:
+        sim_time = sim_time[0]
+        time_units = "seconds"
+
+    elif sim_time[1] and not sim_time[0]:
+        sim_time = sim_time[1]
+        time_units = "iterations"
+
+    if time_units == "iterations":
+        if sim_time < 10000:
+            dcd_save_interval = 1000
+        else:
+            dcd_save_interval = 50000
+    elif time_units == "seconds":
+        if sim_time < 600:
+            dcd_save_interval = 1000
+        else:
+            dcd_save_interval = 50000
 
     simulation = app.simulation.Simulation(
         pdb.topology,
@@ -361,11 +413,27 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 name + "/{:d}/{:s}.dcd".format(temp, name),
-                int(50000),
+                dcd_save_interval,
                 append=True,
             )
         )
     else:
+
+        # Saving simulation parameters into a 'parameter.dat' file to facilitate
+        # data analysis and results parsing later
+        with open(f"./{folder}parameters.dat", "w+") as f:
+            f.write("# Simulation parameters\n")
+            f.write(f"# {time.strftime('%d.%m.%Y - %H:%M:%S')}\n\n")
+            f.write(f"PROT_NAME\t{name}\n")
+            f.write(f"TEMP_(K)\t{temp}\n")
+            f.write(f"DRG_NAME\t{sm_mol[0]}\n")
+            f.write(f"DRG_CONC_(mM)\t{sm_mol[1]}\n")
+            f.write(f"DRG_NUMB\t{str(drg_param[1])}\n")
+            f.write(f"DRG_DIST_(nm)\t{sm_mol[2]}\n")
+            f.write(f"DRG_LAMB\t{drg_param[0]}\n")
+            f.write(f"SIM_TIME\t{sim_time}\n")
+            f.write(f"TIME_UNIT\t{time_units}\n")
+
         logger.info("\nStarting simulation...\n")
         simulation.context.setPositions(pdb.positions)
 
@@ -384,24 +452,13 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
             f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
         )
 
-        # This conditional block checks the simulation time format given,
-        # allowing to simulate a certain number of seconds or a number of
-        # timesteps.
-        if sim_time[0] and not sim_time[1]:
-            sim_time = sim_time[0]
-            time_type = "seconds"
-
-        elif sim_time[1] and not sim_time[0]:
-            sim_time = sim_time[1]
-            time_type = "iterations"
-
-        logger.info(f"\nRunning simulation for {sim_time} {time_type}.")
+        logger.info(f"\nRunning simulation for {sim_time} {time_units}.")
 
         try:
             simulation.reporters.append(
                 app.dcdreporter.DCDReporter(
                     name + f"/{temp}/{name}_{temp}_{sm_mol[0]}_report.dcd",
-                    int(50000),
+                    dcd_save_interval,
                 )
             )
 
@@ -409,7 +466,7 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
             simulation.reporters.append(
                 app.dcdreporter.DCDReporter(
                     name + f"/{temp}/{name}_{temp}_NODRG_report.dcd",
-                    int(50000),
+                    dcd_save_interval,
                 )
             )
 
@@ -431,7 +488,7 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
     # The checkpoint save time scales with the simulation length. The interval
     # can be adjusted.
     # Initial runtime was 20h.
-    if time_type == "seconds":
+    if time_units == "seconds":
         simulation.runForClockTime(
             sim_time * unit.second,
             checkpointFile=check_point,
@@ -439,7 +496,7 @@ def simulate(residues, name, prot, temp, sm_mol, sim_time, verbosity, platf):
         )
 
     # Alternative method of running the simulation
-    elif time_type == "iterations":
+    elif time_units == "iterations":
 
         # Adding a checkpoint reporter manually, as the step method does not
         # have an option to automatically add the reporter.
@@ -472,8 +529,11 @@ if __name__ == "__main__":
     # Custom logger for easier debugging, using the python logging module.
     logger, verbosity = ut.custom_logger(args)
 
-    residues = pd.read_csv("./data/residues.csv").set_index("three", drop=False)
-    proteins = pd.read_pickle("./data/proteins.pkl")
+    real_path = os.path.split(os.path.realpath(__file__))[0]
+    residues = pd.read_csv(f"{real_path}/data/residues.csv").set_index(
+        "three", drop=False
+    )
+    proteins = pd.read_pickle(f"{real_path}/data/proteins.pkl")
 
     logger.info(f"\nWorking with protein {args.name[0]} at {args.temp[0]} K.")
 
@@ -487,6 +547,10 @@ if __name__ == "__main__":
         sim_time=[args.time, args.nsteps],
         verbosity=verbosity,
         platf=args.cpu,
+        check_collision=args.check_collision,
+        lambd_override=args.lambd,
+        sigma_override=args.sigma,
+        mass_override=args.mass,
     )
 
     logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")

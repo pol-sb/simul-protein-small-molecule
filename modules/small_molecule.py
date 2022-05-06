@@ -32,9 +32,16 @@ def add_drugs(
     comp_dist,
     verbosity,
     residues,
+    col_chk_flag: bool,
+    lambd_override: float,
+    mass_override: float,
 ):
     # Get verbosity level
     # logger.setLevel(verbosity[0])
+
+    # This list will contain a list of small molecule related parameters
+    # for result reporting.
+    drg_param = []
 
     # Decide how many particles to place by using the concentration.
     sim_box_data = system.getDefaultPeriodicBoxVectors()
@@ -51,9 +58,16 @@ def add_drugs(
     logger.debug(f"Simulation box volume: {sim_box_vol_L} L")
     logger.debug(f"Small molecule concentration: {conc}")
 
-    for drg_typ in drug_components:
-        lam = residues.loc[residues["three"] == f"{drg_typ}"]["lambdas"][0]
-        logger.info(f"Component {drg_typ} with lambda: {lam}")
+    lambda_list = []
+
+    # TODO: Update this for several components.
+    if lambd_override or lambd_override == 0:
+        drg_param.append(lambd_override)
+    else:
+        for drg_typ in drug_components:
+            lam = residues.loc[residues["three"] == f"{drg_typ}"]["lambdas"][0]
+            lambda_list.append(lam)
+        drg_param.append(lambda_list)
 
     # print("comp_molarmass: ", comp_molarmass, "g/mol")
 
@@ -70,13 +84,21 @@ def add_drugs(
     # Avogadro's constant.
     num_part = int((tot_mmol * 1e-3) * 6.02214076e23)
     logger.info(f"Generating {num_part} particles.")
+    drg_param.append(num_part)
 
     # Adding the small molecules to the system. Each AA has its own molecular
     # weight.
-    for drg_typ in drug_components:
-        res_row = residues.loc[residues["three"] == f"{drg_typ}"]
-        for part in range(num_part):
-            system.addParticle(res_row["MW"][0] * unit.amu)
+    if mass_override:
+        for drg_ind, drg_typ in enumerate(drug_components):
+            print(f"For {drg_typ} using non-default mass: {mass_override[drg_ind]}")
+            for part in range(num_part):
+                system.addParticle(mass_override[drg_ind] * unit.amu)
+    else:
+        for drg_typ in drug_components:
+            res_row = residues.loc[residues["three"] == f"{drg_typ}"]
+            print(f"For {drg_typ} using default mass: {res_row['MW'][0]}")
+            for part in range(num_part):
+                system.addParticle(res_row["MW"][0] * unit.amu)
 
     drugs = CGdrug(
         n_drugs=num_part,
@@ -84,9 +106,10 @@ def add_drugs(
         system=system,
         in_top=in_top,
         in_traj=in_traj,
-        dist_threshold=1,
+        dist_threshold=25,
         distance=comp_dist,
         verbosity=verbosity,
+        col_chk_flag=col_chk_flag,
     )
 
     # TODO: The add_charge function is unused.
@@ -107,7 +130,7 @@ def add_drugs(
     top_ats.to_csv(directory + "sm_drg_ats.csv")
     np.save(directory + "sm_drg_bnd.npy", top_bnd)
 
-    return traj, top, system, num_part
+    return traj, top, system, num_part, drg_param
 
 
 class CGdrug:
@@ -121,6 +144,7 @@ class CGdrug:
         dist_threshold,
         distance,
         verbosity,
+        col_chk_flag,
     ):
 
         self.verbosity = verbosity
@@ -131,7 +155,9 @@ class CGdrug:
         self.prot_top = in_top
 
         centers = self._gen_centers(n_drugs, system)
-        self._add_components(centers, n_components, distance, dist_threshold)
+        self._add_components(
+            centers, n_components, distance, dist_threshold, col_chk_flag
+        )
         self._create_topology()
         self._create_trajectory()
 
@@ -154,55 +180,65 @@ class CGdrug:
 
         return centers
 
-    def collision_check(self, dist_threshold):
+    def collision_check(self, dist_threshold: float, enabled: bool):
+        dist_threshold = enabled[0]
 
-        if self.verbosity[0] == logging.DEBUG:
-            verb = True
+        if enabled:
+            logger.info(
+                "Small drug particles generated. Starting protein collision check...\n"
+            )
+
+            t1 = time.time()
+            changes = 0
+            for aa_ind, aa_cord in enumerate(self.prot_traj.xyz[0]):
+
+                aa_cord = np.array(aa_cord)
+
+                if self.verbosity[0] == logging.INFO:
+                    print(
+                        f"Checking collisions with residue: {aa_ind+1} out of"
+                        f" {len(self.prot_traj.xyz[0][:,0])} - Changes: {changes}",
+                        end="\r",
+                    )
+
+                drg_pos_arr = []
+                for drg in self.description.items():
+                    drg_pos_arr.append(drg[1]["coordinates"])
+                drg_pos_arr = np.array(drg_pos_arr)
+
+                dist_arr = np.linalg.norm(drg_pos_arr - aa_cord, axis=1)
+
+                for chg_drg_ind in np.where(dist_arr < dist_threshold)[0]:
+                    drg_pos_arr[chg_drg_ind][1] = (
+                        self.Ly / 2 - (-self.Ly / 2)
+                    ) * np.random.ranf(1) + (-self.Ly / 2)
+                    changes += 1
+
+                # OLD VERSION OF THE COLLISION CHECK CODE
+                #
+                # for drug_ind, drug_coord in enumerate(self.description.items()):
+
+                #     for part in drug_coord[1]["coordinates"]:
+                #         dist = np.linalg.norm(part - aa_cord)
+
+                #         while dist <= dist_threshold:
+                #             new_y_pos = (self.Ly / 2 - (-self.Ly / 2)) * np.random.ranf(
+                #                 1
+                #             ) + (-self.Ly / 2)
+
+                #             # This won't work if we add more than two particles...
+                #             drug_coord[1]["coordinates"][0][1] = new_y_pos
+                #             drug_coord[1]["coordinates"][1][1] = new_y_pos
+
+                #             dist = np.linalg.norm(part - aa_cord)
+                #             changes += 1
+
+            t2 = time.time()
+            logger.info(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
         else:
-            verb = False
+            logger.warning("Collision check disabled.\n")
 
-        logger.info(
-            "Small drug particles generated. Starting protein collision check...\n"
-        )
-
-        t1 = time.time()
-        changes = 0
-        for aa_ind, aa_cord in enumerate(self.prot_traj.xyz[0]):
-
-            if verb:
-                print(
-                    f"Checking collisions with residue: {aa_ind+1} out of"
-                    f" {len(self.prot_traj.xyz[0][:,0])} - Changes: {changes}",
-                    end="\r",
-                )
-
-            for drug_ind, drug_coord in enumerate(self.description.items()):
-
-                for part in drug_coord[1]["coordinates"]:
-                    dist = np.linalg.norm(part - aa_cord)
-
-                    while dist <= dist_threshold:
-                        new_y_pos = (self.Ly / 2 - (-self.Ly / 2)) * np.random.ranf(
-                            1
-                        ) + (-self.Ly / 2)
-
-                        # This won't work if we add more than two particles...
-                        drug_coord[1]["coordinates"][0][1] = new_y_pos
-                        drug_coord[1]["coordinates"][1][1] = new_y_pos
-
-                        dist = np.linalg.norm(part - aa_cord)
-                        changes += 1
-
-        t2 = time.time()
-        logger.info(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
-
-    def _add_components(
-        self,
-        centers,
-        n_comp,
-        distance,
-        dist_threshold,
-    ):
+    def _add_components(self, centers, n_comp, distance, dist_threshold, col_chk_flag):
 
         if len(n_comp) == 2:
             logger.debug(f"Detected 2 components: {n_comp}")
@@ -248,8 +284,9 @@ class CGdrug:
         else:
             logger.critical(f"{len(n_comp)} components not supported.")
 
-        logger.critical("Remember to delete this and reenable the collision check")
-        # self.collision_check(dist_threshold)
+        # print('col_chk_flag: ', col_chk_flag)
+        # quit()
+        self.collision_check(dist_threshold, enabled=col_chk_flag)
 
     def _create_topology(self):
 
@@ -271,14 +308,6 @@ class CGdrug:
                 cntr += 1
 
     def _create_trajectory(self):
-
-        # coord_arr = []
-
-        # for drug in self.description.values():
-        #     for coord in drug["coordinates"]:
-        #         coord_arr.append(coord)
-
-        # coord_arr = np.array(coord_arr)
 
         total_coords = np.vstack((self.prot_traj.xyz[0], self.coord_arr_drg))
 

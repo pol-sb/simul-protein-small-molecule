@@ -131,13 +131,13 @@ def prepare_profile(traj, sim_name):
 
         dens_ext_bottom = dens.shape[0]
 
-        # Saving density average for each frame into a file so it can
-        # be used later for plotting.
+        # Saving the protein density average for each frame into a file so it
+        # can be used later for plotting.
         dens_avg = np.mean(dens[EQUIL_TIME:, :], axis=0)
         dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
         np.savetxt(dens_filename, dens_avg_dat)
 
-        # Saving density average for each frame into a file so it can
+        # Saving the drug density average for each frame into a file so it can
         # be used later for plotting.
         dens_drg_avg = np.mean(dens_drg[EQUIL_TIME:, :], axis=0)
         dens_drg_avg_dat = np.array([range(dens_drg[0].shape[0]), dens_drg_avg])

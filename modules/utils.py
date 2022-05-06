@@ -13,15 +13,21 @@ def arg_parse():
         nargs=1,
         type=str,
         help="Name of the protein sequence to be simulated.",
+        required=True,
     )
+
     g1.add_argument(
         "--temp",
         "-T",
         nargs=1,
         type=int,
         help="Temperature (in K) of the system.",
+        required=True,
     )
-    g1.add_argument(
+
+    g3 = parser.add_argument_group("Small molecule parameters")
+
+    g3.add_argument(
         "--small_molec",
         "-sm",
         nargs=3,
@@ -31,16 +37,63 @@ def arg_parse():
             " of the small molecules to be added. \nFor example:"
             " ARG-LYS 0.005 0.5"
         ),
+        required=True,
     )
 
-    g1.add_argument(
+    g3.add_argument(
+        "--lambd",
+        "-lmb",
+        nargs="+",
+        type=float,
+        help=(
+            "List of float lambda values to use for the small molecules, given in the"
+            " same order as the small molecules."
+        ),
+    )
+
+    g3.add_argument(
+        "--sigma",
+        "-sig",
+        nargs="+",
+        type=float,
+        help=(
+            "List of float sigma values to use for the small molecules, given in the"
+            " same order as the small molecules."
+        ),
+    )
+
+    g3.add_argument(
+        "--mass",
+        "-m",
+        nargs="+",
+        type=float,
+        help=(
+            "List of float molar mass values to use for the small molecules, given in"
+            " the same order as the small molecules."
+        ),
+    )
+
+    g3.add_argument(
+        "--check_collision",
+        "-cchk",
+        type=float,
+        nargs=1,
+        help=(
+            "If present, enables collision check after adding the small"
+            " molecules into the system. Omit this option to disable the check."
+        ),
+    )
+
+    g4 = parser.add_argument_group("Output options")
+
+    g4.add_argument(
         "-v",
         "--verbose",
         help="Increase output verbosity",
         action="store_true",
     )
 
-    g1.add_argument(
+    g4.add_argument(
         "-q",
         "--quiet",
         help="Decrease output verbosity",
@@ -53,7 +106,7 @@ def arg_parse():
         action="store_true",
     )
 
-    g2 = parser.add_argument_group("Simulation time selection.")
+    g2 = parser.add_argument_group("Simulation time selection")
     g2_1 = g2.add_mutually_exclusive_group(required=True)
 
     g2_1.add_argument(
