@@ -181,12 +181,14 @@ class CGdrug:
         return centers
 
     def collision_check(self, dist_threshold: float, enabled: bool):
-        dist_threshold = enabled[0]
 
         if enabled:
             logger.info(
-                "Small drug particles generated. Starting protein collision check...\n"
+                "Small drug particles generated. Starting protein "
+                "collision check...\n"
             )
+
+            dist_threshold = enabled[0]
 
             t1 = time.time()
             changes = 0
@@ -213,25 +215,6 @@ class CGdrug:
                         self.Ly / 2 - (-self.Ly / 2)
                     ) * np.random.ranf(1) + (-self.Ly / 2)
                     changes += 1
-
-                # OLD VERSION OF THE COLLISION CHECK CODE
-                #
-                # for drug_ind, drug_coord in enumerate(self.description.items()):
-
-                #     for part in drug_coord[1]["coordinates"]:
-                #         dist = np.linalg.norm(part - aa_cord)
-
-                #         while dist <= dist_threshold:
-                #             new_y_pos = (self.Ly / 2 - (-self.Ly / 2)) * np.random.ranf(
-                #                 1
-                #             ) + (-self.Ly / 2)
-
-                #             # This won't work if we add more than two particles...
-                #             drug_coord[1]["coordinates"][0][1] = new_y_pos
-                #             drug_coord[1]["coordinates"][1][1] = new_y_pos
-
-                #             dist = np.linalg.norm(part - aa_cord)
-                #             changes += 1
 
             t2 = time.time()
             logger.info(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
