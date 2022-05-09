@@ -193,6 +193,7 @@ def simulate(
                 col_chk_flag=check_collision,
                 lambd_override=lambd_override,
                 mass_override=mass_override,
+                sigma_override=sigma_override
             )
 
             pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")

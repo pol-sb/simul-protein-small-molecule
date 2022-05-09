@@ -35,6 +35,7 @@ def add_drugs(
     col_chk_flag: bool,
     lambd_override: float,
     mass_override: float,
+    sigma_override: float,
 ):
     # Get verbosity level
     # logger.setLevel(verbosity[0])
@@ -69,8 +70,6 @@ def add_drugs(
             lambda_list.append(lam)
         drg_param.append(lambda_list)
 
-    # print("comp_molarmass: ", comp_molarmass, "g/mol")
-
     # Computing the total number of particles needed to fulfill
     # the given concentration.
     # mass / vol = conc -> mass = conc*vol
@@ -85,6 +84,22 @@ def add_drugs(
     num_part = int((tot_mmol * 1e-3) * 6.02214076e23)
     logger.info(f"Generating {num_part} particles.")
     drg_param.append(num_part)
+
+    sigmas = []
+    if sigma_override or sigma_override == 0:
+        sigmas.append(sigma_override[0])
+    else:
+        for drg_typ in drug_components:
+            sig = residues.loc[residues["three"] == f"{drg_typ}"]["sigmas"][0]
+            sigmas.append(sig)
+
+    # Computing the volume occupied by all of the small molecules added.
+    # BUG: Volume is multiplied every time by num part, which is not correct
+    volume = 0
+    for sigma in sigmas:
+        volume += ((4 / 3) * np.pi * ((sigma/2)**3)) * num_part
+    logger.info(f"Volume* occupied by the small molecules: {round(volume, 2)}")
+
 
     # Adding the small molecules to the system. Each AA has its own molecular
     # weight.
@@ -184,8 +199,7 @@ class CGdrug:
 
         if enabled:
             logger.info(
-                "Small drug particles generated. Starting protein "
-                "collision check...\n"
+                "Small drug particles generated. Starting protein collision check...\n"
             )
 
             dist_threshold = enabled[0]

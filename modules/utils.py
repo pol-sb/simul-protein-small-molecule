@@ -1,11 +1,20 @@
 import logging
-from argparse import ArgumentParser
+import argparse
 
 
 def arg_parse():
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=(
+            "OpenMM script to run intrinsically disordered protein MD simulations"
+            " including small molecules in the system.\nA command"
+            " example:\n\n\tsimulate.py --name Q5-8_20 --temp 323 --small_molec GLY 20"
+            " 0 -lmb 0 --sigma 0.45 -m 57.5 --time 43200 -cchk"
+            " 10\n\n────────────────────────── Arguments ──────────────────────────"
+        ),
+    )
 
-    g1 = parser.add_argument_group("Mandatory simulation parameters")
+    g1 = parser.add_argument_group("Simulation parameters")
 
     g1.add_argument(
         "--name",
@@ -29,36 +38,38 @@ def arg_parse():
 
     g3.add_argument(
         "--small_molec",
-        "-sm",
+        "-s",
         nargs=3,
         type=str,
         help=(
-            "Name (3 letter name), concentration (in mM) and distance (in A)"
-            " of the small molecules to be added. \nFor example:"
-            " ARG-LYS 0.005 0.5"
+            "Names (3 letter name), concentration (in mM) and distance between "
+            "particles (in A) "
+            "of the small molecules to be added. \nFor example: "
+            "ARG-LYS 0.005 0.5 "
         ),
         required=True,
     )
 
     g3.add_argument(
         "--lambd",
-        "-lmb",
+        "--lam",
+        "--lmb",
         nargs="+",
         type=float,
         help=(
-            "List of float lambda values to use for the small molecules, given in the"
-            " same order as the small molecules."
+            "List of float lambda values to use for the small molecules, given "
+            "in the same order as the small molecules."
         ),
     )
 
     g3.add_argument(
         "--sigma",
-        "-sig",
+        "--sig",
         nargs="+",
         type=float,
         help=(
-            "List of float sigma values to use for the small molecules, given in the"
-            " same order as the small molecules."
+            "List of float sigma values to use for the small molecules, given "
+            "in the same order as the small molecules."
         ),
     )
 
@@ -75,7 +86,7 @@ def arg_parse():
 
     g3.add_argument(
         "--check_collision",
-        "-cchk",
+        "--cc",
         type=float,
         nargs=1,
         help=(
@@ -100,12 +111,6 @@ def arg_parse():
         action="store_true",
     )
 
-    g1.add_argument(
-        "--cpu",
-        help="Use only the CPU as platform for the openmm.simulation.",
-        action="store_true",
-    )
-
     g2 = parser.add_argument_group("Simulation time selection")
     g2_1 = g2.add_mutually_exclusive_group(required=True)
 
@@ -127,6 +132,14 @@ def arg_parse():
         const=0,
         type=int,
         help="Number of seconds to run the simulation.",
+    )
+
+    g_sim = parser.add_argument_group("Simulation configuration")
+
+    g_sim.add_argument(
+        "--cpu",
+        help="Use only the CPU as platform for the openmm.simulation.",
+        action="store_true",
     )
 
     args = parser.parse_args()
