@@ -1,11 +1,15 @@
-import mdtraj as md
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import sys
 
-ASP_RAT_MOD = 1.25
+import matplotlib.pyplot as plt
+import mdtraj as md
+import numpy as np
+
+import utils as ut
+
+ASP_RAT_MOD = 1.50
 Z_LIM = 75
+EXTENT = 75
 EQUIL_TIME = 500
 
 
@@ -44,7 +48,15 @@ def create_histogram(z, dens, z_lim):
     return dens
 
 
-def prepare_profile(traj, sim_name):
+def read_lambda():
+
+    param_dict = ut.read_parameters()
+    lambd = param_dict["DRG_LAMB"].replace("[", "").replace("]", "")
+
+    return lambd
+
+
+def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
 
     z = traj.xyz[:, :, 2]
     box_z_length = traj.unitcell_lengths[0][2]
@@ -66,34 +78,51 @@ def prepare_profile(traj, sim_name):
 
         S = traj.unitcell_lengths[0, 0] ** 2
 
-        dens = create_histogram(z, dens, z_lim=Z_LIM)
-        dens = np.array(dens)
+        plot_flag = ""
 
-        dens_filename = f"avgdens_frame_prot_{sim_name[0][:-11]}_NODRG.out"
+        while plot_flag != "ok":
 
-        dens_ext_bottom = dens.shape[0]
+            dens = []
+            dens_drg = []
+            Z_LIM = float(
+                input(f"\n  [?] Please input 'z_lim' value (previous {Z_LIM}): ")
+            )
+            EXTENT = float(
+                input(f"\n  [?] Please input the 'extent' value (previous {EXTENT}): ")
+            )
 
-        # Saving density average for each frame into a file so it can
-        # be used later for plotting.
-        dens_avg = np.mean(dens[EQUIL_TIME:, :], axis=0)
-        dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
-        np.savetxt(dens_filename, dens_avg_dat)
+            dens = create_histogram(z, dens, z_lim=Z_LIM)
+            dens = np.array(dens)
 
-        plt.xlabel("z")
-        plt.ylabel("time")
-        plt.title(sim_name[0][:-11] + "_prot")
-        plt.imshow(
-            dens,
-            aspect=0.1,
-            cmap="viridis",
-            extent=[-Z_LIM, Z_LIM, dens_ext_bottom, 0],
-        )
-        plt.tight_layout()
+            dens_filename = f"avgdens_frame_prot_{sim_name[0][:-11]}_NODRG.out"
+
+            dens_ext_bottom = dens.shape[0]
+
+            # Saving density average for each frame into a file so it can
+            # be used later for plotting.
+            dens_avg = np.mean(dens[EQUIL_TIME:, :], axis=0)
+            dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
+            np.savetxt(dens_filename, dens_avg_dat)
+
+            plt.xlabel("z")
+            plt.ylabel("time")
+            plt.title(sim_name[0][:-11] + "_prot")
+            plt.imshow(
+                dens,
+                aspect=0.1,
+                cmap="viridis",
+                extent=[-EXTENT, EXTENT, dens_ext_bottom, 0],
+            )
+            plt.tight_layout()
+            plt.ion()
+            plt.show()
+            plot_flag = input("\n  [?] Input 'ok' if the plot is ready: ").lower()
+
         plt.savefig(f"{sim_name[0][:-11]}_NODRG_densprof.png", dpi=400)
 
     else:
 
-        lmbda_val = input("      Plase input the lambda value: ")
+        lmbda_val = read_lambda()
 
         print("\n  [*] Centering trajectory", end="")
 
@@ -113,68 +142,85 @@ def prepare_profile(traj, sim_name):
 
         # S = traj.unitcell_lengths[0, 0] ** 2
 
-        dens = create_histogram(z_prot, dens, z_lim=Z_LIM)
-        dens_drg = create_histogram(z_drg, dens_drg, z_lim=Z_LIM)
+        plot_flag = ""
 
-        dens = np.array(dens)
-        dens_drg = np.array(dens_drg)
+        while plot_flag != "ok":
 
-        dens_filename = (
-            f"avgdens_frame_prot_{sim_name[0][:-11]}_lmbda-"
-            f'{lmbda_val.replace(".","")}.out'
-        )
+            dens = []
+            dens_drg = []
+            Z_LIM = float(
+                input(f"\n  [?] Please input 'z_lim' value (previous {Z_LIM}): ")
+            )
+            EXTENT = float(
+                input(f"\n  [?] Please input the 'extent' value (previous {EXTENT}): ")
+            )
 
-        dens_drg_filename = (
-            f"avgdens_frame_drg_{sim_name[0][:-11]}_lmbda-"
-            f'{lmbda_val.replace(".","")}.out'
-        )
+            dens = create_histogram(z_prot, dens, z_lim=Z_LIM)
+            dens_drg = create_histogram(z_drg, dens_drg, z_lim=Z_LIM)
 
-        dens_ext_bottom = dens.shape[0]
+            dens = np.array(dens)
+            dens_drg = np.array(dens_drg)
 
-        # Saving the protein density average for each frame into a file so it
-        # can be used later for plotting.
-        dens_avg = np.mean(dens[EQUIL_TIME:, :], axis=0)
-        dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
-        np.savetxt(dens_filename, dens_avg_dat)
+            dens_filename = (
+                f"avgdens_frame_prot_{sim_name[0][:-11]}_lmbda-"
+                f'{lmbda_val.replace(".","")}.out'
+            )
 
-        # Saving the drug density average for each frame into a file so it can
-        # be used later for plotting.
-        dens_drg_avg = np.mean(dens_drg[EQUIL_TIME:, :], axis=0)
-        dens_drg_avg_dat = np.array([range(dens_drg[0].shape[0]), dens_drg_avg])
-        np.savetxt(dens_drg_filename, dens_drg_avg_dat)
+            dens_drg_filename = (
+                f"avgdens_frame_drg_{sim_name[0][:-11]}_lmbda-"
+                f'{lmbda_val.replace(".","")}.out'
+            )
 
-        fig, ax = plt.subplots(ncols=2)
+            dens_ext_bottom = dens.shape[0]
 
-        plt_prot = ax[0]
-        plt_drg = ax[1]
+            # Saving the protein density average for each frame into a file so it
+            # can be used later for plotting.
+            dens_avg = np.mean(dens[EQUIL_TIME:, :], axis=0)
+            dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
+            np.savetxt(dens_filename, dens_avg_dat.T)
 
-        plt_prot.set_xlabel("z")
-        plt_prot.set_ylabel("time")
-        plt_prot.set_title(sim_name[0][:-11] + "_prot")
-        im1 = plt_prot.imshow(
-            dens,
-            aspect=(dens.shape[1] / dens.shape[0]) * ASP_RAT_MOD,
-            cmap="viridis",
-            # vmax=abs(dens).max(),
-            # vmin=-abs(dens).max(),
-            extent=[-75, 75, dens_ext_bottom, 0],
-        )
+            # Saving the drug density average for each frame into a file so it can
+            # be used later for plotting.
+            dens_drg_avg = np.mean(dens_drg[EQUIL_TIME:, :], axis=0)
+            dens_drg_avg_dat = np.array([range(dens_drg[0].shape[0]), dens_drg_avg])
+            np.savetxt(dens_drg_filename, dens_drg_avg_dat.T)
 
-        plt_drg.set_xlabel("z")
-        plt_drg.set_ylabel("time")
-        plt_drg.set_title(
-            sim_name[0][:-11] + "_drg\n" + r"$\lambda =$" + f"{lmbda_val}"
-        )
+            fig, ax = plt.subplots(ncols=2)
 
-        im2 = plt_drg.imshow(
-            dens_drg,
-            aspect=(dens.shape[1] / dens.shape[0]) * ASP_RAT_MOD,
-            cmap="viridis",
-            extent=[-75, 75, dens_ext_bottom, 0],
-        )
-        fig.colorbar(im1, ax=plt_prot, shrink=0.5, pad=0.025)
-        fig.colorbar(im2, ax=plt_drg, shrink=0.5, pad=0.025)
-        fig.tight_layout(pad=1.5)
+            plt_prot = ax[0]
+            plt_drg = ax[1]
+
+            plt_prot.set_xlabel("z")
+            plt_prot.set_ylabel("time")
+            plt_prot.set_title(sim_name[0][:-11] + "_prot")
+            im1 = plt_prot.imshow(
+                dens,
+                aspect=(dens.shape[1] / dens.shape[0]) * ASP_RAT_MOD,
+                cmap="viridis",
+                # vmax=abs(dens).max(),
+                # vmin=-abs(dens).max(),
+                extent=[-EXTENT, EXTENT, dens_ext_bottom, 0],
+            )
+
+            plt_drg.set_xlabel("z")
+            plt_drg.set_ylabel("time")
+            plt_drg.set_title(
+                sim_name[0][:-11] + "_drg\n" + r"$\lambda =$" + f"{lmbda_val}"
+            )
+
+            im2 = plt_drg.imshow(
+                dens_drg,
+                aspect=(dens.shape[1] / dens.shape[0]) * ASP_RAT_MOD,
+                cmap="viridis",
+                extent=[-EXTENT, EXTENT, dens_ext_bottom, 0],
+            )
+            fig.colorbar(im1, ax=plt_prot, shrink=0.5, pad=0.025)
+            fig.colorbar(im2, ax=plt_drg, shrink=0.5, pad=0.025)
+            fig.tight_layout(pad=1.5)
+            plt.ion()
+            plt.show()
+            plot_flag = input("\n  [?] Input 'ok' if the plot is ready: ").lower()
+
         plt.savefig(
             f'{sim_name[0][:-11]}_lmbda-{lmbda_val.replace(".","")}_densprof.png',
             dpi=400,
@@ -183,4 +229,4 @@ def prepare_profile(traj, sim_name):
 
 if __name__ == "__main__":
     traj, s_name = get_trajectory(stride=None)
-    prepare_profile(traj, s_name)
+    prepare_profile(traj, s_name, Z_LIM, EXTENT)

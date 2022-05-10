@@ -1,5 +1,6 @@
 import logging
 import argparse
+import pprint as pp
 
 
 def arg_parse():
@@ -184,6 +185,26 @@ def custom_logger(args):
     verbosity = [verb, fmt_str]
 
     return logger, verbosity
+
+
+def read_parameters():
+
+    # Opening the parameter file
+    with open("parameters.dat", "r") as f:
+        params_raw = f.readlines()
+
+    # Initializing parameter dictionary
+    param_dict = {}
+
+    # Reading the parameters and storing them into a dictionary iteratively
+    for param in params_raw[3:]:
+        param_clean = param.strip().split("\t")
+        param_dict[param_clean[0]] = param_clean[1]
+
+    param_dict["START_DATE"] = params_raw[1].replace("#", "").split(" - ")[0].strip()
+    param_dict["START_TIME"] = params_raw[1].replace("#", "").split(" - ")[1].strip()
+
+    return param_dict
 
 
 if __name__ == "__main__":
