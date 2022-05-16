@@ -10,7 +10,7 @@ import utils as ut
 ASP_RAT_MOD = 1.50
 Z_LIM = 75
 EXTENT = 75
-EQUIL_TIME = 500
+EQUIL_TIME = 2000
 
 
 def get_trajectory(stride):
@@ -68,7 +68,9 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
 
     drg = traj.top.select("resname DRG")
 
+    # Systems with no small molecule
     if len(drg) == 0:
+
         print("\n  [*] Centering trajectory", end="")
 
         z -= np.median(z, 1, keepdims=True)
@@ -76,20 +78,13 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
 
         print(" - DONE")
 
-        S = traj.unitcell_lengths[0, 0] ** 2
+        # S = traj.unitcell_lengths[0, 0] ** 2
 
         plot_flag = ""
 
         while plot_flag != "ok":
 
             dens = []
-            dens_drg = []
-            Z_LIM = float(
-                input(f"\n  [?] Please input 'z_lim' value (previous {Z_LIM}): ")
-            )
-            EXTENT = float(
-                input(f"\n  [?] Please input the 'extent' value (previous {EXTENT}): ")
-            )
 
             dens = create_histogram(z, dens, z_lim=Z_LIM)
             dens = np.array(dens)
@@ -102,24 +97,37 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
             # be used later for plotting.
             dens_avg = np.mean(dens[EQUIL_TIME:, :], axis=0)
             dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
-            np.savetxt(dens_filename, dens_avg_dat)
+            np.savetxt(dens_filename, dens_avg_dat.T)
 
             plt.xlabel("z")
             plt.ylabel("time")
             plt.title(sim_name[0][:-11] + "_prot")
             plt.imshow(
                 dens,
-                aspect=0.1,
+                aspect=(dens.shape[1] / dens.shape[0]) * ASP_RAT_MOD,
                 cmap="viridis",
                 extent=[-EXTENT, EXTENT, dens_ext_bottom, 0],
             )
+            fig.colorbar(im1, shrink=0.5, pad=0.025)
             plt.tight_layout()
             plt.ion()
             plt.show()
             plot_flag = input("\n  [?] Input 'ok' if the plot is ready: ").lower()
 
+            if plot_flag != "ok":
+                Z_LIM = float(
+                    input(f"\n  [?] Please input 'z_lim' value (previous {Z_LIM}): ")
+                )
+
+                EXTENT = float(
+                    input(
+                        f"\n  [?] Please input the 'extent' value (previous {EXTENT}): "
+                    )
+                )
+
         plt.savefig(f"{sim_name[0][:-11]}_NODRG_densprof.png", dpi=400)
 
+    # For systems with small molecule
     else:
 
         lmbda_val = read_lambda()
@@ -148,12 +156,6 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
 
             dens = []
             dens_drg = []
-            Z_LIM = float(
-                input(f"\n  [?] Please input 'z_lim' value (previous {Z_LIM}): ")
-            )
-            EXTENT = float(
-                input(f"\n  [?] Please input the 'extent' value (previous {EXTENT}): ")
-            )
 
             dens = create_histogram(z_prot, dens, z_lim=Z_LIM)
             dens_drg = create_histogram(z_drg, dens_drg, z_lim=Z_LIM)
@@ -220,6 +222,17 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
             plt.ion()
             plt.show()
             plot_flag = input("\n  [?] Input 'ok' if the plot is ready: ").lower()
+
+            if plot_flag != "ok":
+                Z_LIM = float(
+                    input(f"\n  [?] Please input 'z_lim' value (previous {Z_LIM}): ")
+                )
+
+                EXTENT = float(
+                    input(
+                        f"\n  [?] Please input the 'extent' value (previous {EXTENT}): "
+                    )
+                )
 
         plt.savefig(
             f'{sim_name[0][:-11]}_lmbda-{lmbda_val.replace(".","")}_densprof.png',
