@@ -8,9 +8,9 @@ def arg_parse():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
             "OpenMM script to run intrinsically disordered protein MD simulations"
-            " including small molecules in the system.\nA command"
-            " example:\n\n\tsimulate.py --name Q5-8_20 --temp 323 --small_molec GLY 20"
-            " 0 -lmb 0 --sigma 0.45 -m 57.5 --time 43200 -cchk"
+            " including small molecules in the system.\nAn example"
+            " command:\n\n\tsimulate.py --name Q5-8_20 --temp 323 --small_molec GLY 20"
+            " 0 --lmb 0 --sigma 0.45 -m 57.5 --time 43200 --cc"
             " 10\n\n────────────────────────── Arguments ──────────────────────────"
         ),
     )
@@ -187,10 +187,10 @@ def custom_logger(args):
     return logger, verbosity
 
 
-def read_parameters():
+def read_parameters(path=""):
 
     # Opening the parameter file
-    with open("parameters.dat", "r") as f:
+    with open(f"{path}parameters.dat", "r") as f:
         params_raw = f.readlines()
 
     # Initializing parameter dictionary
