@@ -427,6 +427,11 @@ def simulate(
             f.write(f"# {time.strftime('%d.%m.%Y - %H:%M:%S')}\n\n")
             f.write(f"PROT_NAME\t{name}\n")
             f.write(f"TEMP_(K)\t{temp}\n")
+
+            if sm_mol == None:
+                sm_mol = ["NODRG", 0, 0]
+                drg_param = ["None", 0]
+
             f.write(f"DRG_NAME\t{sm_mol[0]}\n")
             f.write(f"DRG_CONC_(mM)\t{sm_mol[1]}\n")
             f.write(f"DRG_NUMB\t{str(drg_param[1])}\n")

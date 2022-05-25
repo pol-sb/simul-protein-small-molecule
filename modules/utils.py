@@ -41,6 +41,8 @@ def arg_parse():
         "--small_molec",
         "-s",
         nargs=3,
+        default=None,
+        const=None,
         type=str,
         help=(
             "Names (3 letter name), concentration (in mM) and distance between "
@@ -48,7 +50,6 @@ def arg_parse():
             "of the small molecules to be added. \nFor example: "
             "ARG-LYS 0.005 0.5 "
         ),
-        required=True,
     )
 
     g3.add_argument(
