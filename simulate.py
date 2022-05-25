@@ -539,7 +539,11 @@ if __name__ == "__main__":
     residues = pd.read_csv(f"{real_path}/data/residues.csv").set_index(
         "three", drop=False
     )
-    proteins = pd.read_pickle(f"{real_path}/data/proteins.pkl")
+
+    try:
+        proteins = pd.read_pickle(f"{real_path}/data/proteins.pkl")
+    except ValueError:
+        proteins = pd.read_pickle(f"{real_path}/data/proteins_v4.pkl")
 
     logger.info(f"\nWorking with protein {args.name[0]} at {args.temp[0]} K.")
 
