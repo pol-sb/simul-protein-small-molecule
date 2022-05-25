@@ -1,6 +1,8 @@
-import logging
 import argparse
+import logging
 import pprint as pp
+import time
+
 import requests
 
 
@@ -209,13 +211,34 @@ def read_parameters(path=""):
     return param_dict
 
 
+def write_params(path: str, name, temp, sm_mol, drg_param, sim_time, time_units, sigma):
+    with open(path, "w+") as f:
+        f.write("# Simulation parameters\n")
+        f.write(f"# {time.strftime('%d.%m.%Y - %H:%M:%S')}\n\n")
+        f.write(f"PROT_NAME\t{name}\n")
+        f.write(f"TEMP_(K)\t{temp}\n")
+
+        if sm_mol is None:
+            sm_mol = ["NODRG", 0, 0]
+            drg_param = ["None", 0]
+
+        f.write(f"DRG_NAME\t{sm_mol[0]}\n")
+        f.write(f"DRG_CONC_(mM)\t{sm_mol[1]}\n")
+        f.write(f"DRG_NUMB\t{str(drg_param[1])}\n")
+        f.write(f"DRG_DIST_(nm)\t{sm_mol[2]}\n")
+        f.write(f"DRG_LAMB\t{drg_param[0]}\n")
+        f.write(f"DRG_SIGMA\t{sigma}\n")
+        f.write(f"SIM_TIME\t{sim_time}\n")
+        f.write(f"TIME_UNIT\t{time_units}\n")
+
+
 def send_notif(title, body, pb_token):
     """Send notifications to pushbullet with the given API key."""
 
-    url = 'https://api.pushbullet.com/v2/pushes'
-    headers = {f'Access-Token': pb_token, 'Content-Type': 'application/json'}
+    url = "https://api.pushbullet.com/v2/pushes"
+    headers = {f"Access-Token": pb_token, "Content-Type": "application/json"}
     data = {"type": "note", "title": title, "body": body}
-    req = requests.post(url, auth=(pb_token, ''), data=data)
+    req = requests.post(url, auth=(pb_token, ""), data=data)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 import os
 import time
+from ast import literal_eval
 
 import openmm
 import openmm.unit as unit
@@ -422,23 +423,16 @@ def simulate(
 
         # Saving simulation parameters into a 'parameter.dat' file to facilitate
         # data analysis and results parsing later
-        with open(f"./{folder}parameters.dat", "w+") as f:
-            f.write("# Simulation parameters\n")
-            f.write(f"# {time.strftime('%d.%m.%Y - %H:%M:%S')}\n\n")
-            f.write(f"PROT_NAME\t{name}\n")
-            f.write(f"TEMP_(K)\t{temp}\n")
-
-            if sm_mol == None:
-                sm_mol = ["NODRG", 0, 0]
-                drg_param = ["None", 0]
-
-            f.write(f"DRG_NAME\t{sm_mol[0]}\n")
-            f.write(f"DRG_CONC_(mM)\t{sm_mol[1]}\n")
-            f.write(f"DRG_NUMB\t{str(drg_param[1])}\n")
-            f.write(f"DRG_DIST_(nm)\t{sm_mol[2]}\n")
-            f.write(f"DRG_LAMB\t{drg_param[0]}\n")
-            f.write(f"SIM_TIME\t{sim_time}\n")
-            f.write(f"TIME_UNIT\t{time_units}\n")
+        ut.write_params(
+            path=f"./{folder}parameters.dat",
+            name=name,
+            temp=temp,
+            sm_mol=sm_mol,
+            drg_param=drg_param,
+            sim_time=sim_time,
+            time_units=time_units,
+            sigma=sigma,
+        )
 
         logger.info("\nStarting simulation...\n")
         simulation.context.setPositions(pdb.positions)
@@ -543,7 +537,11 @@ if __name__ == "__main__":
     try:
         proteins = pd.read_pickle(f"{real_path}/data/proteins.pkl")
     except ValueError:
-        proteins = pd.read_pickle(f"{real_path}/data/proteins_v4.pkl")
+        proteins = pd.read_csv(
+            f"{real_path}/data/proteins.csv", converters={"fasta": literal_eval}
+        )
+        prot_new = proteins.rename(columns={"Unnamed: 0": "Name"})
+        proteins = prot_new.set_index("Name")
 
     logger.info(f"\nWorking with protein {args.name[0]} at {args.temp[0]} K.")
 
