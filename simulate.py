@@ -193,7 +193,7 @@ def simulate(
                 col_chk_flag=check_collision,
                 lambd_override=lambd_override,
                 mass_override=mass_override,
-                sigma_override=sigma_override
+                sigma_override=sigma_override,
             )
 
             pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
@@ -544,6 +544,7 @@ if __name__ == "__main__":
     logger.info(f"\nWorking with protein {args.name[0]} at {args.temp[0]} K.")
 
     t0 = time.time()
+
     simulate(
         residues=residues,
         name=args.name[0],
@@ -560,3 +561,25 @@ if __name__ == "__main__":
     )
 
     logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")
+
+    # Attempting to send a push notification to a pushbullet account to notify the
+    # end of the simulation. Needs an API key which has to be stored in the file
+    # ./modules/.pbtoken
+    try:
+        with open(f"{real_path}/modules/.pbtoken", "r") as f:
+            pb_token = f.readline().strip()
+
+        notification_body = f"Total time: \n{time.time()-t0:.1f} s\n\nParameters:"
+        for arg in vars(args):
+            notification_body += f"\n{arg}: {args.__dict__[arg]}".replace(
+                "[", ""
+            ).replace("]", "")
+
+        ut.send_notif(
+            title="Simulation Complete",
+            body=notification_body,
+            pb_token=pb_token,
+        )
+
+    except FileNotFoundError:
+        logger.info("'.pbtoken' not found. Ommiting push notification.")

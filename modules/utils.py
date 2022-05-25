@@ -1,6 +1,7 @@
 import logging
 import argparse
 import pprint as pp
+import requests
 
 
 def arg_parse():
@@ -206,6 +207,15 @@ def read_parameters(path=""):
     param_dict["START_TIME"] = params_raw[1].replace("#", "").split(" - ")[1].strip()
 
     return param_dict
+
+
+def send_notif(title, body, pb_token):
+    """Send notifications to pushbullet with the given API key."""
+
+    url = 'https://api.pushbullet.com/v2/pushes'
+    headers = {f'Access-Token': pb_token, 'Content-Type': 'application/json'}
+    data = {"type": "note", "title": title, "body": body}
+    req = requests.post(url, auth=(pb_token, ''), data=data)
 
 
 if __name__ == "__main__":

@@ -93,8 +93,9 @@ def add_drugs(
             sig = residues.loc[residues["three"] == f"{drg_typ}"]["sigmas"][0]
             sigmas.append(sig)
 
-    # Computing the volume occupied by all of the small molecules added.
-    # BUG: Volume is multiplied every time by num part, which is not correct
+    # Computing the total volume occupied by all of the small molecules.
+    # BUG: Volume is multiplied every time by num part, which is not correct if there
+    # is more than one sigma given
     volume = 0
     for sigma in sigmas:
         volume += ((4 / 3) * np.pi * ((sigma/2)**3)) * num_part
