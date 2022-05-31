@@ -211,7 +211,9 @@ def read_parameters(path=""):
     return param_dict
 
 
-def write_params(path: str, name, temp, sm_mol, drg_param, sim_time, time_units, sigma):
+def write_params(
+    path: str, name, temp, sm_mol, drg_param, sim_time, time_units, sigma, mass
+):
     with open(path, "w+") as f:
         f.write("# Simulation parameters\n")
         f.write(f"# {time.strftime('%d.%m.%Y - %H:%M:%S')}\n\n")
@@ -228,6 +230,7 @@ def write_params(path: str, name, temp, sm_mol, drg_param, sim_time, time_units,
         f.write(f"DRG_DIST_(nm)\t{sm_mol[2]}\n")
         f.write(f"DRG_LAMB\t{drg_param[0]}\n")
         f.write(f"DRG_SIGMA\t{sigma}\n")
+        f.write(f"DRG_MASS\t{mass}\n")
         f.write(f"SIM_TIME\t{sim_time}\n")
         f.write(f"TIME_UNIT\t{time_units}\n")
 

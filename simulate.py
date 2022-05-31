@@ -395,6 +395,7 @@ def simulate(
             dcd_save_interval = 1000
         else:
             dcd_save_interval = 50000
+
     elif time_units == "seconds":
         if sim_time < 600:
             dcd_save_interval = 1000
@@ -432,6 +433,7 @@ def simulate(
             sim_time=sim_time,
             time_units=time_units,
             sigma=sigma,
+            mass=mass_override
         )
 
         logger.info("\nStarting simulation...\n")
