@@ -203,6 +203,8 @@ def simulate(
 
         else:
             logger.info("No small molecule given. Proceeding with only protein.")
+            drg_param = "None"
+            sigma = "None"
 
     else:
         logger.info("\nReading small molecules from stored files...")
