@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import utils as ut
@@ -40,6 +41,12 @@ def prepare_dict():
         drg_conc = params["DRG_CONC_(mM)"]
 
         try:
+            drg_conc = float(drg_conc)
+        except ValueError:
+            if drg_conc == "None":
+                drg_conc = None
+
+        try:
             sim_dict[prot_name][drg_name][drg_conc]
         except KeyError:
             sim_dict[prot_name][drg_name][drg_conc] = {}
@@ -49,7 +56,8 @@ def prepare_dict():
         try:
             lambd = float(lambd)
         except ValueError:
-            pass
+            if lambd == "None":
+                lambd = None
 
         try:
             sim_dict[prot_name][drg_name][drg_conc][lambd]
@@ -61,7 +69,8 @@ def prepare_dict():
         try:
             sigma = float(sigma)
         except ValueError:
-            pass
+            if sigma == "None":
+                sigma = None
 
         try:
             sim_dict[prot_name][drg_name][drg_conc][lambd][sigma]
@@ -97,10 +106,20 @@ data_df = pd.DataFrame(
     columns=["protein", "small_molec", "conc", "lambd", "sigma", "temp", "average"],
 )
 
+
+# Defining a new list to be used as a new column for the plateau average.
+plat_avg_list = []
+
+# Adding the plateau average to the dataframe.
+for avg in data_df["average"]:
+    plat_avg_list.append(np.average(avg[:, 1][65:84]))
+
+data_df["plat_avg"] = plat_avg_list
+
+print(data_df)
+
 save = input("Save the database? (y/n) ")
 
 if save.lower() == "y":
     data_df.to_pickle("simulations_df.pkl")
     data_df.to_csv("simulations_df.csv")
-
-print(data_df)
