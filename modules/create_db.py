@@ -16,27 +16,22 @@ def prepare_dict_list():
         idp_cnt = 0
         # print('tup[2]: ', tup[2])
         # quit()
-        print('\n\ntup[2]: ', tup[2])
         for fname in tup[2]:
-            print('fname: ', fname)
+
             if (".out" in fname) and ("_drg_" not in fname):
                 idp_paths.append(tup[0] + "/" + fname)
                 idp_cnt += 1
-                print('added idp')
+
             elif (".out" in fname) and ("_drg_" in fname):
                 # print(tup[0] + "/" + fname)
                 drg_paths.append(tup[0] + "/" + fname)
-                print('added drg')
+
                 drg_cnt += 1
 
         if idp_cnt > 0 and drg_cnt == 0:
-            print('added none')
-            drg_paths.append('None')
+            print("added none")
+            drg_paths.append("None")
 
-    print(len(idp_paths))
-    print('\n'*3)
-    print(len(drg_paths))
-    quit()
     # Filling the dict_list with every record available
     dict_list = []
     for path, path2 in zip(idp_paths, drg_paths):
@@ -48,6 +43,11 @@ def prepare_dict_list():
             lamb = None
         else:
             lamb = float(params["DRG_LAMB"].translate(str.maketrans("", "", "[]")))
+
+        if params["DRG_NAME"] == "NODRG":
+            drg_name = None
+        else:
+            drg_name = params["DRG_NAME"]
 
         if params["TEMP_(K)"] in [None, "None"]:
             temp = None
@@ -64,23 +64,22 @@ def prepare_dict_list():
         else:
             conc = float(params["DRG_CONC_(mM)"])
 
+        try:
+            drg_avg = np.loadtxt(path2)
+        except FileNotFoundError:
+            drg_avg = "None"
+
         sim_dict = {
             "protein": params["PROT_NAME"],
-            "small_molec": params["DRG_NAME"],
+            "small_molec": drg_name,
             "conc": conc,
             "lambda": lamb,
             "sigma": sigma,
             "temp": temp,
             "idp_average": np.loadtxt(path),
-            "drg_average": np.loadtxt(path2),
+            "drg_average": drg_avg,
         }
 
-        print(sim_dict['small_molec'])
-        if sim_dict['small_molec'] == 'NODRG':
-            print('sim_dict: ', sim_dict)
-            print('path: ', path)
-            print('path2: ', path2)
-            quit()
         dict_list.append(sim_dict)
 
     return dict_list
@@ -105,7 +104,11 @@ for avg in data_df["idp_average"]:
     plat_idp_list.append(np.average(avg[:, 1][65:84]))
 
 for avg in data_df["drg_average"]:
-    plat_drg_list.append(np.average(avg[:, 1][65:84]))
+
+    if avg != "None":
+        plat_drg_list.append(np.average(avg[:, 1][65:84]))
+    else:
+        plat_drg_list.append("None")
 
 data_df["idp_plat_avg"] = plat_idp_list
 data_df["drg_plat_avg"] = plat_drg_list
