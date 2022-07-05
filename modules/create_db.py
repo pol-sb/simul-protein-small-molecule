@@ -12,12 +12,28 @@ def prepare_dict_list():
 
     # Gathering the '.out' file paths
     for tup in os.walk("."):
+        drg_cnt = 0
+        # print('tup[2]: ', tup[2])
+        # quit()
         for fname in tup[2]:
+            print('\n\nfname: ', fname)
             if (".out" in fname) and ("_drg_" not in fname):
                 idp_paths.append(tup[0] + "/" + fname)
+                print('added idp')
             elif (".out" in fname) and ("_drg_" in fname):
+                # print(tup[0] + "/" + fname)
                 drg_paths.append(tup[0] + "/" + fname)
+                print('added drg')
+                drg_cnt += 1
 
+        if drg_cnt == 0:
+            print('added none')
+            drg_paths.append('None')
+
+    print(len(idp_paths))
+    print('\n'*3)
+    print(len(drg_paths))
+    quit()
     # Filling the dict_list with every record available
     dict_list = []
     for path, path2 in zip(idp_paths, drg_paths):
@@ -56,6 +72,12 @@ def prepare_dict_list():
             "drg_average": np.loadtxt(path2),
         }
 
+        print(sim_dict['small_molec'])
+        if sim_dict['small_molec'] == 'NODRG':
+            print('sim_dict: ', sim_dict)
+            print('path: ', path)
+            print('path2: ', path2)
+            quit()
         dict_list.append(sim_dict)
 
     return dict_list
