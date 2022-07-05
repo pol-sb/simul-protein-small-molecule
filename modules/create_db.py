@@ -18,18 +18,23 @@ def prepare_dict_list():
             elif (".out" in fname) and ("_drg_" in fname):
                 drg_paths.append(tup[0] + "/" + fname)
 
-
     # Filling the dict_list with every record available
     dict_list = []
     for path, path2 in zip(idp_paths, drg_paths):
 
         fold_n = "/".join(path.split("/")[:-1]) + "/"
         params = ut.read_parameters(fold_n)
+
+        if params["DRG_LAMB"] in [None, "None"]:
+            lamb = None
+        else:
+            lamb = float(params["DRG_LAMB"].translate(str.maketrans("", "", "[]")))
+
         sim_dict = {
             "protein": params["PROT_NAME"],
             "small_molec": params["DRG_NAME"],
             "conc": float(params["DRG_CONC_(mM)"]),
-            "lambda": float(params["DRG_LAMB"].translate(str.maketrans("", "", "[]"))),
+            "lambda": lamb,
             "sigma": float(params["DRG_SIGMA"]),
             "temp": float(params["TEMP_(K)"]),
             "idp_average": np.loadtxt(path),
