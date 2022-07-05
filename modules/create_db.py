@@ -3,118 +3,67 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import utils as ut
+import pprint as pp
 
 
-def prepare_dict():
+def prepare_dict_list():
+    idp_paths = []
+    drg_paths = []
 
-    paths = []
+    # Gathering the '.out' file paths
     for tup in os.walk("."):
         for fname in tup[2]:
             if (".out" in fname) and ("_drg_" not in fname):
-                paths.append(tup[0] + "/" + fname)
+                idp_paths.append(tup[0] + "/" + fname)
+            elif (".out" in fname) and ("_drg_" in fname):
+                drg_paths.append(tup[0] + "/" + fname)
 
-    sim_dict = {}
 
-    # this part fills up the dictionary with all of the paths, it is probably
-    # the least elegant solution in the world, but works for now.
-    for path in paths:
+    # Filling the dict_list with every record available
+    dict_list = []
+    for path, path2 in zip(idp_paths, drg_paths):
 
         fold_n = "/".join(path.split("/")[:-1]) + "/"
         params = ut.read_parameters(fold_n)
-        # print("params: ", params)
-        prot_name = params["PROT_NAME"]
+        sim_dict = {
+            "protein": params["PROT_NAME"],
+            "small_molec": params["DRG_NAME"],
+            "conc": float(params["DRG_CONC_(mM)"]),
+            "lambda": float(params["DRG_LAMB"].translate(str.maketrans("", "", "[]"))),
+            "sigma": float(params["DRG_SIGMA"]),
+            "temp": float(params["TEMP_(K)"]),
+            "idp_average": np.loadtxt(path),
+            "drg_average": np.loadtxt(path2),
+        }
 
-        try:
-            sim_dict[prot_name]
-        except KeyError:
-            sim_dict[prot_name] = {}
+        dict_list.append(sim_dict)
 
-        drg_name = params["DRG_NAME"]
-        if drg_name == "None":
-            drg_name = "NODRG"
-
-        try:
-            sim_dict[prot_name][drg_name]
-        except KeyError:
-            sim_dict[prot_name][drg_name] = {}
-
-        drg_conc = params["DRG_CONC_(mM)"]
-
-        try:
-            drg_conc = float(drg_conc)
-        except ValueError:
-            if drg_conc == "None":
-                drg_conc = None
-
-        try:
-            sim_dict[prot_name][drg_name][drg_conc]
-        except KeyError:
-            sim_dict[prot_name][drg_name][drg_conc] = {}
-
-        lambd = params["DRG_LAMB"].replace("[", "").replace("]", "")
-
-        try:
-            lambd = float(lambd)
-        except ValueError:
-            if lambd == "None":
-                lambd = None
-
-        try:
-            sim_dict[prot_name][drg_name][drg_conc][lambd]
-        except KeyError:
-            sim_dict[prot_name][drg_name][drg_conc][lambd] = {}
-
-        # print('path: ', path)
-        sigma = params["DRG_SIGMA"]
-        try:
-            sigma = float(sigma)
-        except ValueError:
-            if sigma == "None":
-                sigma = None
-
-        try:
-            sim_dict[prot_name][drg_name][drg_conc][lambd][sigma]
-        except KeyError:
-            sim_dict[prot_name][drg_name][drg_conc][lambd][sigma] = {}
-
-        temp = params["TEMP_(K)"]
-
-        try:
-            sim_dict[prot_name][drg_name][drg_conc][lambd][sigma][int(temp)]
-        except KeyError:
-            sim_dict[prot_name][drg_name][drg_conc][lambd][sigma][
-                int(temp)
-            ] = np.loadtxt(path)
-
-    return sim_dict
+    return dict_list
 
 
+# Limiting the np.array decimal length
 np.set_printoptions(threshold=2)
-data_dict = prepare_dict()
-# print('data_dict: ', data_dict["Q5-8_20"]["GLY"])
-# print('data_dict: ', data_dict)
-data_df = pd.DataFrame(
-    [
-        (k1, k2, k3, k4, k5, k6, v)
-        for k1, k23456v in data_dict.items()
-        for k2, k3456v in k23456v.items()
-        for k3, k456v in k3456v.items()
-        for k4, k56v in k456v.items()
-        for k5, k6v in k56v.items()
-        for k6, v in k6v.items()
-    ],
-    columns=["protein", "small_molec", "conc", "lambd", "sigma", "temp", "average"],
-)
+
+# Calling the function to fill the dictionary
+rec_list = prepare_dict_list()
 
 
-# Defining a new list to be used as a new column for the plateau average.
-plat_avg_list = []
+data_df = pd.json_normalize(rec_list)
 
-# Adding the plateau average to the dataframe.
-for avg in data_df["average"]:
-    plat_avg_list.append(np.average(avg[:, 1][65:84]))
 
-data_df["plat_avg"] = plat_avg_list
+# Defining new lists to be used as a new column for the plateau average.
+plat_idp_list = []
+plat_drg_list = []
+
+# Adding the plateau averages to the dataframe.
+for avg in data_df["idp_average"]:
+    plat_idp_list.append(np.average(avg[:, 1][65:84]))
+
+for avg in data_df["drg_average"]:
+    plat_drg_list.append(np.average(avg[:, 1][65:84]))
+
+data_df["idp_plat_avg"] = plat_idp_list
+data_df["drg_plat_avg"] = plat_drg_list
 
 print(data_df)
 
