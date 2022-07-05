@@ -30,13 +30,28 @@ def prepare_dict_list():
         else:
             lamb = float(params["DRG_LAMB"].translate(str.maketrans("", "", "[]")))
 
+        if params["TEMP_(K)"] in [None, "None"]:
+            temp = None
+        else:
+            temp = float(params["TEMP_(K)"])
+
+        if params["DRG_SIGMA"] in [None, "None"]:
+            sigma = None
+        else:
+            sigma = float(params["DRG_SIGMA"])
+
+        if params["DRG_CONC_(mM)"] in [None, "None"]:
+            conc = None
+        else:
+            conc = float(params["DRG_CONC_(mM)"])
+
         sim_dict = {
             "protein": params["PROT_NAME"],
             "small_molec": params["DRG_NAME"],
-            "conc": float(params["DRG_CONC_(mM)"]),
+            "conc": conc,
             "lambda": lamb,
-            "sigma": float(params["DRG_SIGMA"]),
-            "temp": float(params["TEMP_(K)"]),
+            "sigma": sigma,
+            "temp": temp,
             "idp_average": np.loadtxt(path),
             "drg_average": np.loadtxt(path2),
         }
