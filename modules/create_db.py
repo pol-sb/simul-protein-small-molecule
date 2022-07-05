@@ -13,12 +13,15 @@ def prepare_dict_list():
     # Gathering the '.out' file paths
     for tup in os.walk("."):
         drg_cnt = 0
+        idp_cnt = 0
         # print('tup[2]: ', tup[2])
         # quit()
+        print('\n\ntup[2]: ', tup[2])
         for fname in tup[2]:
-            print('\n\nfname: ', fname)
+            print('fname: ', fname)
             if (".out" in fname) and ("_drg_" not in fname):
                 idp_paths.append(tup[0] + "/" + fname)
+                idp_cnt += 1
                 print('added idp')
             elif (".out" in fname) and ("_drg_" in fname):
                 # print(tup[0] + "/" + fname)
@@ -26,7 +29,7 @@ def prepare_dict_list():
                 print('added drg')
                 drg_cnt += 1
 
-        if drg_cnt == 0:
+        if idp_cnt > 0 and drg_cnt == 0:
             print('added none')
             drg_paths.append('None')
 
