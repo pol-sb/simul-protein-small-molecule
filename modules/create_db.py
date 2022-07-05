@@ -75,7 +75,7 @@ def prepare_dict_list():
             "protein": params["PROT_NAME"],
             "small_molec": drg_name,
             "conc": conc,
-            "lambda": lamb,
+            "lambd": lamb,
             "sigma": sigma,
             "temp": temp,
             "idp_average": np.loadtxt(path),
@@ -110,7 +110,7 @@ for avg in data_df["drg_average"]:
     if avg != "None":
         plat_drg_list.append(np.average(avg[:, 1][65:84]))
     else:
-        plat_drg_list.append("None")
+        plat_drg_list.append(None)
 
 data_df["idp_plat_avg"] = plat_idp_list
 data_df["drg_plat_avg"] = plat_drg_list
