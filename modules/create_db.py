@@ -68,6 +68,8 @@ def prepare_dict_list():
             drg_avg = np.loadtxt(path2)
         except FileNotFoundError:
             drg_avg = "None"
+        except IOError:
+            drg_avg = "None"
 
         sim_dict = {
             "protein": params["PROT_NAME"],
