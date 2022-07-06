@@ -210,16 +210,19 @@ def simulate(
         logger.info("\nReading small molecules from stored files...")
         top_ats = pd.read_csv(folder + "sm_drg_ats.csv")
 
-        n_drugs = (len(top_ats) - n_parts_old) // 2
+        # This was before: n_drugs = (len(top_ats) - n_parts_old) // 2
+        n_drugs = len(top_ats) - n_parts_old
+        logger.info(f"number of drugs: {n_drugs}")
 
         top_bnd = np.load(folder + "sm_drg_bnd.npy")
         top = md.Topology.from_dataframe(top_ats, top_bnd)
 
-        in_traj = md.load(folder + "sm_drg_traj.pdb")
+        in_traj = md.load(folder + "final_system_state.pdb")
 
         pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
+        top = pdb.getTopology()
 
-        logger.critical(f"in_traj top: {in_traj.topology}")
+        logger.info(f"in_traj top: {in_traj.topology}")
 
         with open(
             f"./{name}/{int(temp)}/{name}_{temp}_{sm_mol[0]}_system.xml", "r"
@@ -227,7 +230,7 @@ def simulate(
             system_ser = f.read()
             system = XmlSerializer.deserialize(system_ser)
 
-        logger.debug(f"system num parts: {system.getNumParticles()}")
+        # logger.info(system.getForces())
 
     logger.info("\nSetting bonded and non-bonded interactions...")
     # Adding a regular harmonic bond force
@@ -294,6 +297,7 @@ def simulate(
             # Finding the row of the AA corresponding to our type of molecule.
             res_row = residues.loc[residues["three"] == f"{type_drg}"]
 
+            # Checking if non default lambda was given.
             if lambd_override or lambd_override == 0:
                 lambdas = lambd_override[drg_ind]
                 logger.info(f"For {type_drg} using non-default lambda: {lambdas}")
@@ -301,6 +305,7 @@ def simulate(
                 lambdas = res_row["lambdas"][0]
                 logger.info(f"For {type_drg} using default lambda: {lambdas}")
 
+            # Checking if non default sigma was given.
             if sigma_override or sigma_override == 0:
                 sigma = sigma_override[drg_ind]
                 logger.info(f"For {type_drg} using non-default sigma: {sigma}")
@@ -314,6 +319,7 @@ def simulate(
                 yu.addParticle(
                     [res_row["q"][0] * unit.nanometer * unit.kilojoules_per_mole]
                 )
+
                 ah.addParticle(
                     [
                         sigma * unit.nanometer,
@@ -335,15 +341,13 @@ def simulate(
                     8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
                 )
 
-                # Important, this makes pair not affect eachother with non
+                # Important, this makes pair noname + "/{:d}/{:s}.dcd".format(temp, name)t affect eachother with non
                 # bonded potentials
                 yu.addExclusion(i, i + 1)
                 ah.addExclusion(i, i + 1)
 
     logger.debug(f"ah:, {ah.getNumParticles()}")
     logger.debug(f"yu:, {yu.getNumParticles()}")
-
-    logger.debug(pdb.topology)
 
     yu.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
     ah.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
@@ -353,19 +357,27 @@ def simulate(
     yu.setCutoffDistance(4 * unit.nanometer)
     ah.setCutoffDistance(4 * unit.nanometer)
 
-    system.addForce(hb)
-    system.addForce(yu)
-    system.addForce(ah)
+    if not os.path.isfile(check_point):
+        system.addForce(hb)
+        system.addForce(yu)
+        system.addForce(ah)
 
-    serialized_system = XmlSerializer.serialize(system)
+        serialized_system = XmlSerializer.serialize(system)
 
-    try:
-        outfile = open(f"./{folder}{name}_{temp}_{sm_mol[0]}_system.xml", "w")
-    except TypeError:
-        outfile = open(f"./{folder}{name}_{temp}_NODRG_system.xml", "w")
+        try:
+            outfile = open(f"./{folder}{name}_{temp}_{sm_mol[0]}_system.xml", "w")
+        except TypeError:
+            outfile = open(f"./{folder}{name}_{temp}_NODRG_system.xml", "w")
 
-    outfile.write(serialized_system)
-    outfile.close()
+        logger.info("Generating '.xml' system file...")
+        outfile.write(serialized_system)
+        outfile.close()
+
+    else:
+        logger.info("\nCheckpoint file found, skipping system generation.")
+        logger.debug(f"System num parts: {system.getNumParticles()}\n")
+
+        logger.debug(pdb.topology)
 
     integrator = openmm.openmm.LangevinIntegrator(
         temp * unit.kelvin, 0.01 / unit.picosecond, 0.005 * unit.picosecond
@@ -384,6 +396,9 @@ def simulate(
     # This conditional block checks the simulation time format given,
     # allowing to simulate a certain number of seconds or a number of
     # timesteps.
+
+    log_report_interval = 1000
+
     if sim_time[0] and not sim_time[1]:
         sim_time = sim_time[0]
         time_units = "seconds"
@@ -400,28 +415,49 @@ def simulate(
 
     elif time_units == "seconds":
         if sim_time < 600:
-            dcd_save_interval = 1000
+            log_report_interval = 10
+            dcd_save_interval = 100
         else:
             dcd_save_interval = 50000
 
-    simulation = app.simulation.Simulation(
-        pdb.topology,
-        system,
-        integrator,
-        platform,
-        platformProperties=platform_props,
-    )
+    if not os.path.isfile(check_point):
+        simulation = app.simulation.Simulation(
+            pdb.topology,
+            system,
+            integrator,
+            platform,
+            platformProperties=platform_props,
+        )
+
+    else:
+        simulation = app.simulation.Simulation(
+            top,
+            system,
+            integrator,
+            platform,
+            platformProperties=platform_props,
+        )
+
+        logger.info("\nResuming simulation from checkpoint file...")
+        simulation.loadCheckpoint(check_point)
+        logger.info("Checkpoint loaded!")
 
     if os.path.isfile(check_point):
-        logger.info("\nResuming simulation from checkpoint file.\n")
-        simulation.loadCheckpoint(check_point)
-        simulation.reporters.append(
-            app.dcdreporter.DCDReporter(
-                name + "/{:d}/{:s}.dcd".format(temp, name),
-                dcd_save_interval,
-                append=True,
+        try:
+            simulation.reporters.append(
+                app.dcdreporter.DCDReporter(
+                    name + f"/{temp}/{name}_{temp}_{sm_mol[0]}_report.dcd",
+                    dcd_save_interval,
+                    append=True,
+                )
             )
-        )
+        except TypeError:
+            simulation.reporters.append(
+                app.dcdreporter.DCDReporter(
+                    name + f"/{temp}/{name}_{temp}_NODRG_report.dcd",
+                    dcd_save_interval,
+                )
+            )
     else:
 
         # Saving simulation parameters into a 'parameter.dat' file to facilitate
@@ -435,7 +471,7 @@ def simulate(
             sim_time=sim_time,
             time_units=time_units,
             sigma=sigma,
-            mass=mass_override
+            mass=mass_override,
         )
 
         logger.info("\nStarting simulation...\n")
@@ -455,8 +491,6 @@ def simulate(
             "Potential energy after minimization:"
             f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
         )
-
-        logger.info(f"\nRunning simulation for {sim_time} {time_units}.")
 
         try:
             simulation.reporters.append(
@@ -478,7 +512,7 @@ def simulate(
     simulation.reporters.append(
         app.statedatareporter.StateDataReporter(
             f"{folder}{name}_{temp}.log",
-            1000,
+            reportInterval=log_report_interval,
             potentialEnergy=True,
             temperature=True,
             step=True,
@@ -489,6 +523,7 @@ def simulate(
         )
     )
 
+    logger.info(f"\nRunning simulation for {sim_time} {time_units}.")
     # The checkpoint save time scales with the simulation length. The interval
     # can be adjusted.
     # Initial runtime was 20h.
