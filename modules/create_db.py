@@ -29,7 +29,6 @@ def prepare_dict_list():
                 drg_cnt += 1
 
         if idp_cnt > 0 and drg_cnt == 0:
-            print("added none")
             drg_paths.append("None")
 
     # Filling the dict_list with every record available
@@ -100,20 +99,32 @@ data_df = pd.json_normalize(rec_list)
 # Defining new lists to be used as a new column for the plateau average.
 plat_idp_list = []
 plat_drg_list = []
+dilute_idp_list = []
+dilute_drg_list = []
 
 # Adding the plateau averages to the dataframe.
 for avg in data_df["idp_average"]:
     plat_idp_list.append(np.average(avg[:, 1][65:84]))
 
+    dilute_region = np.hstack([avg[:, 1][:65], avg[:, 1][84:]])
+    dilute_idp_list.append(np.average(dilute_region))
+
 for avg in data_df["drg_average"]:
 
-    if avg != "None":
+    if type(avg) == np.ndarray:
         plat_drg_list.append(np.average(avg[:, 1][65:84]))
+        dilute_drg_region = np.hstack([avg[:, 1][:65], avg[:, 1][84:]])
+        dilute_drg_list.append(np.average(dilute_drg_region))
+
     else:
         plat_drg_list.append(None)
+        dilute_drg_list.append(None)
 
 data_df["idp_plat_avg"] = plat_idp_list
 data_df["drg_plat_avg"] = plat_drg_list
+
+data_df["idp_dilu_avg"] = dilute_idp_list
+data_df["drg_dilu_avg"] = dilute_drg_list
 
 print(data_df)
 
