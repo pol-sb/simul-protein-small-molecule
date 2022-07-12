@@ -2,6 +2,8 @@ import argparse
 import logging
 import pprint as pp
 import time
+import subprocess as sb
+
 
 import requests
 
@@ -147,11 +149,19 @@ def arg_parse():
     )
 
     g_sim = parser.add_argument_group("Simulation configuration")
+    g_sim_2 = g_sim.add_mutually_exclusive_group(required=True)
 
-    g_sim.add_argument(
+    g_sim_2.add_argument(
         "--cpu",
-        help="Use only the CPU as platform for the openmm.simulation.",
+        help="Use the CPU as platform for the openmm.simulation.",
         action="store_true",
+    )
+    g_sim_2.add_argument(
+        "--gpu",
+        nargs="+",
+        metavar="GPUID",
+        type=int,
+        help="Use the GPU as platform for the openmm.simulation. More than ",
     )
 
     ex_sim = parser.add_argument_group("Simulation post-treatment")
@@ -178,7 +188,6 @@ def arg_parse():
 
 
 def custom_logger(args):
-
     # Format strings for the logger
     fmt_str = "\n%(asctime)s - %(levelname)s:\n\t %(message)s"
     datefmt = "[%d-%m-%Y %H:%M:%S]"
@@ -217,7 +226,6 @@ def custom_logger(args):
 
 
 def read_parameters(path=""):
-
     # Opening the parameter file
     with open(f"{path}parameters.dat", "r") as f:
         params_raw = f.readlines()
@@ -269,8 +277,12 @@ def send_notif(title, body, pb_token):
     req = requests.post(url, auth=(pb_token, ""), data=data)
 
 
-if __name__ == "__main__":
+def get_gpus():
+    gpu_list = sb.check_output(["nvidia-smi", "-L"]).decode("utf-8").strip()
+    return gpu_list
 
+
+if __name__ == "__main__":
     print(
         "This file is intented to be used as a module file and should only"
         " called from other scripts, not run by itself."

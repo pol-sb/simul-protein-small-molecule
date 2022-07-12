@@ -7,6 +7,7 @@ import openmm.unit as unit
 from openmm import XmlSerializer, app
 
 import modules.small_molecule as smol
+import modules.extensions as ext
 import modules.utils as ut
 from modules.analyse import *
 
@@ -19,13 +20,13 @@ def simulate(
     sm_mol,
     sim_time,
     verbosity,
-    platf,
+    plat_cpu,
+    plat_gpu,
     check_collision,
     lambd_override,
     sigma_override,
     mass_override,
 ):
-
     folder = name + f"/{int(temp)}/"
 
     try:
@@ -168,7 +169,6 @@ def simulate(
     # or be given as a parameter in the argument parser.
 
     if not os.path.isfile(check_point):
-
         if sm_mol:
             # TODO: Use these variables in the sm_mol function to get
             # parameters. Maybe save the small molecule params in a csv file?
@@ -291,9 +291,7 @@ def simulate(
     # # the system. n_drugs (number of small molecules) by 2 (bimolecular).
     # TODO: Allow to choose which AA is used instead of just Glycine.
     if sm_mol:
-
         for drg_ind, type_drg in enumerate(sm_mol[0].split("-")):
-
             # Finding the row of the AA corresponding to our type of molecule.
             res_row = residues.loc[residues["three"] == f"{type_drg}"]
 
@@ -314,7 +312,6 @@ def simulate(
                 logger.info(f"For {type_drg} using default sigma: {sigma}")
 
             for i in range(n_drugs):
-
                 # Yukawa Epsilon of the small molecules
                 yu.addParticle(
                     [res_row["q"][0] * unit.nanometer * unit.kilojoules_per_mole]
@@ -388,17 +385,26 @@ def simulate(
         temp * unit.kelvin, 0.01 / unit.picosecond, 0.005 * unit.picosecond
     )
 
-    if platf:
+    if plat_cpu and not plat_gpu:
         platform = openmm.Platform.getPlatformByName("CPU")
         platform_props = None
         logger.info("\nUsing CPU for the calculations.")
         logger.info(f"This platform's speed score: {platform.getSpeed()}")
     else:
         # Uses CUDA as the platform for the GPU calculations.
-        platform = openmm.Platform.getPlatformByName("CUDA")
-        platform_props = dict(CudaPrecision="mixed", DeviceIndex="0,1")
-        logger.info(f"{platform.getPropertyNames}")
-        logger.info("Using GPU(s) for the calculations.")
+        gpu_names = ut.get_gpus()
+        logger.info(
+            f"\nUsing CUDA for the calculations. GPU(s) available:\n{gpu_names}"
+        )
+        if not plat_gpu:
+            logger.info(f"\nNo GPU index given, using index 0 as fallback.")
+            platform = openmm.Platform.getPlatformByName("CUDA")
+            platform_props = dict(CudaPrecision="mixed", DeviceIndex="0")
+        else:
+            plat_gpu_str = str(plat_gpu).replace("[", "").replace("]", "")
+            logger.info(f"\nUsing GPU index(es): {plat_gpu_str}.")
+            platform = openmm.Platform.getPlatformByName("CUDA")
+            platform_props = dict(CudaPrecision="mixed", DeviceIndex=plat_gpu_str)
 
     # This conditional block checks the simulation time format given,
     # allowing to simulate a certain number of seconds or a number of
@@ -415,7 +421,7 @@ def simulate(
         time_units = "iterations"
 
     if time_units == "iterations":
-        if sim_time < 10000:
+        if sim_time < 100000:
             dcd_save_interval = 1000
         else:
             dcd_save_interval = 50000
@@ -428,23 +434,17 @@ def simulate(
             dcd_save_interval = 50000
 
     if not os.path.isfile(check_point):
-        simulation = app.simulation.Simulation(
-            pdb.topology,
-            system,
-            integrator,
-            platform,
-            platformProperties=platform_props,
-        )
+        top = pdb.topology
 
-    else:
-        simulation = app.simulation.Simulation(
-            top,
-            system,
-            integrator,
-            platform,
-            platformProperties=platform_props,
-        )
+    simulation = app.simulation.Simulation(
+        top,
+        system,
+        integrator,
+        platform,
+        platformProperties=platform_props,
+    )
 
+    if os.path.isfile(check_point):
         logger.info("\nResuming simulation from checkpoint file...")
         simulation.loadCheckpoint(check_point)
         logger.info("Checkpoint loaded!")
@@ -466,7 +466,6 @@ def simulate(
                 )
             )
     else:
-
         # Saving simulation parameters into a 'parameter.dat' file to facilitate
         # data analysis and results parsing later
         ut.write_params(
@@ -515,6 +514,13 @@ def simulate(
                 )
             )
 
+    # Checks if there is an existing .log file in order to select the .log file
+    # writing mode
+    if os.path.isfile(check_point):
+        append_mode = True
+    else:
+        append_mode = False
+
     # Generates log file with information
     simulation.reporters.append(
         app.statedatareporter.StateDataReporter(
@@ -527,6 +533,7 @@ def simulate(
             volume=True,
             elapsedTime=True,
             separator="\t",
+            append=append_mode
         )
     )
 
@@ -545,7 +552,6 @@ def simulate(
 
     # Alternative method of running the simulation
     elif time_units == "iterations":
-
         # Adding a checkpoint reporter manually, as the step method does not
         # have an option to automatically add the reporter.
         simulation.reporters.append(
@@ -561,7 +567,7 @@ def simulate(
         # Running the simulations for the given timesteps.
         simulation.step(sim_time)
 
-    # Saves checkpoint file
+    # Saves final checkpoint file
     simulation.saveCheckpoint(check_point)
 
     # Save final system position.
@@ -574,44 +580,22 @@ def simulate(
 
     # Extending the simulation with a thermostat.
     if args.extend_thermostat:
-        # Getting the temperature and n_steps from the argument parser.
-        ext_T = args.extend_thermostat[0]
-        ext_steps = args.extend_thermostat[1]
-
-        # Printing information
-        logger.info(
-            f"\nMain simulation done.\nApplying thermostat at {ext_T}K and extending"
-            f" simulation for {int(ext_steps)} steps."
+        ext.extend_thermostat(
+            args,
+            logger,
+            top,
+            system,
+            platform,
+            platform_props,
+            check_point,
+            folder,
+            name,
+            temp,
+            log_report_interval,
+            chk_reporter_flag
         )
-
-        # Updating the integrator with the new thermostat temperature.
-        integrator = openmm.openmm.LangevinIntegrator(
-            ext_T * unit.kelvin, 0.01 / unit.picosecond, 0.005 * unit.picosecond
-        )
-
-        if not chk_reporter_flag:
-            # Adding a checkpoint reporter manually, as the step method does not
-            # have an option to automatically add the reporter.
-            simulation.reporters.append(
-                app.CheckpointReporter(
-                    file=check_point,
-                    reportInterval=sim_time * 0.05,
-                )
-            )
-
-            # Adding a flag when the checkpoint file reporter is added to the simulation
-            # to avoid adding it more than once.
-            chk_reporter_flag = True
-
-        # Running the simulations for the given timesteps.
-        simulation.step(int(ext_steps))
-
-        # Printing information
-        logger.info(f"\nSimulation extension done.")
-
 
 if __name__ == "__main__":
-
     args = ut.arg_parse()
 
     # Custom logger for easier debugging, using the python logging module.
@@ -643,7 +627,8 @@ if __name__ == "__main__":
         sm_mol=args.small_molec,
         sim_time=[args.time, args.nsteps],
         verbosity=verbosity,
-        platf=args.cpu,
+        plat_cpu=args.cpu,
+        plat_gpu=args.gpu,
         check_collision=args.check_collision,
         lambd_override=args.lambd,
         sigma_override=args.sigma,
