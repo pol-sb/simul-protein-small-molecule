@@ -379,6 +379,11 @@ def simulate(
 
         logger.debug(pdb.topology)
 
+    # Defining a Langevin Integrator with the following parameters
+    # temperature – the temperature of the heat bath (in Kelvin)
+    # frictionCoeff – the frict. coeff. whcih couples the system to the heat bath
+    # stepSize – the step size with which to integrate the system (in picoseconds)
+
     integrator = openmm.openmm.LangevinIntegrator(
         temp * unit.kelvin, 0.01 / unit.picosecond, 0.005 * unit.picosecond
     )
@@ -524,6 +529,8 @@ def simulate(
     )
 
     logger.info(f"\nRunning simulation for {sim_time} {time_units}.")
+    chk_reporter_flag = None
+
     # The checkpoint save time scales with the simulation length. The interval
     # can be adjusted.
     # Initial runtime was 20h.
@@ -545,6 +552,9 @@ def simulate(
                 reportInterval=sim_time * 0.05,
             )
         )
+        # Adding a flag when the checkpoint file reporter is added to the simulation
+        # to avoid adding it more than once.
+        chk_reporter_flag = True
 
         # Running the simulations for the given timesteps.
         simulation.step(sim_time)
@@ -559,6 +569,43 @@ def simulate(
         positions,
         open(f"{folder}final_system_state.pdb", "w"),
     )
+
+    # Extending the simulation with a thermostat.
+    if args.extend_thermostat:
+        # Getting the temperature and n_steps from the argument parser.
+        ext_T = args.extend_thermostat[0]
+        ext_steps = args.extend_thermostat[1]
+
+        # Printing information
+        logger.info(
+            f"\nMain simulation done.\nApplying thermostat at {ext_T}K and extending"
+            f" simulation for {int(ext_steps)} steps."
+        )
+
+        # Updating the integrator with the new thermostat temperature.
+        integrator = openmm.openmm.LangevinIntegrator(
+            ext_T * unit.kelvin, 0.01 / unit.picosecond, 0.005 * unit.picosecond
+        )
+
+        if not chk_reporter_flag:
+            # Adding a checkpoint reporter manually, as the step method does not
+            # have an option to automatically add the reporter.
+            simulation.reporters.append(
+                app.CheckpointReporter(
+                    file=check_point,
+                    reportInterval=sim_time * 0.05,
+                )
+            )
+
+            # Adding a flag when the checkpoint file reporter is added to the simulation
+            # to avoid adding it more than once.
+            chk_reporter_flag = True
+
+        # Running the simulations for the given timesteps.
+        simulation.step(int(ext_steps))
+
+        # Printing information
+        logger.info(f"\nSimulation extension done.")
 
 
 if __name__ == "__main__":

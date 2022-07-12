@@ -25,6 +25,7 @@ def arg_parse():
         "-N",
         nargs=1,
         type=str,
+        metavar="NAME",
         help="Name of the protein sequence to be simulated.",
         required=True,
     )
@@ -34,6 +35,7 @@ def arg_parse():
         "-T",
         nargs=1,
         type=int,
+        metavar="TEMP",
         help="Temperature (in K) of the system.",
         required=True,
     )
@@ -47,11 +49,11 @@ def arg_parse():
         default=None,
         const=None,
         type=str,
+        metavar=("RES", "CONC", "DISTANCE"),
         help=(
-            "Names (3 letter name), concentration (in mM) and distance between "
-            "particles (in A) "
-            "of the small molecules to be added. \nFor example: "
-            "ARG-LYS 0.005 0.5 "
+            "Residue Names (3 letter name, if more than one, joined by a hyphen),"
+            " concentration (in mM) and distance between particles (in A) of the small"
+            " molecules to be added. \nFor example: ARG-LYS 0.005 0.5 "
         ),
     )
 
@@ -94,9 +96,12 @@ def arg_parse():
         "--cc",
         type=float,
         nargs=1,
+        metavar="DISTANCE",
         help=(
             "If present, enables collision check after adding the small"
             " molecules into the system. Omit this option to disable the check."
+            "Takes a distance value (in A) between the small molecules and the protein"
+            " to check for collision."
         ),
     )
 
@@ -124,6 +129,7 @@ def arg_parse():
         "--steps",
         "-n",
         nargs="?",
+        metavar="NSTEPS",
         const=0,
         type=int,
         help="Number of timesteps to run the simulation.",
@@ -134,6 +140,7 @@ def arg_parse():
         "--tsec",
         "-t",
         nargs="?",
+        metavar="NSECONDS",
         const=0,
         type=int,
         help="Number of seconds to run the simulation.",
@@ -145,6 +152,24 @@ def arg_parse():
         "--cpu",
         help="Use only the CPU as platform for the openmm.simulation.",
         action="store_true",
+    )
+
+    ex_sim = parser.add_argument_group("Simulation post-treatment")
+
+    ex_sim.add_argument(
+        "--extend_thermostat",
+        "--ethermo",
+        "--et",
+        type=float,
+        metavar=("TEMP", "NSTEPS"),
+        nargs=2,
+        help=(
+            "If present, after finishing the main dynamics, modify the thermostat"
+            " temperature and run the simulation for a given number of steps. "
+            "--extend_thermostat takes two arguments: the first is the new "
+            "temperature and the second is the number of steps to run the "
+            "simulation."
+        ),
     )
 
     args = parser.parse_args()
