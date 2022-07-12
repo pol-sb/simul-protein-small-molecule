@@ -392,10 +392,12 @@ def simulate(
         platform = openmm.Platform.getPlatformByName("CPU")
         platform_props = None
         logger.info("\nUsing CPU for the calculations.")
+        logger.info(f"This platform's speed score: {platform.getSpeed()}")
     else:
         # Uses CUDA as the platform for the GPU calculations.
         platform = openmm.Platform.getPlatformByName("CUDA")
         platform_props = dict(CudaPrecision="mixed", DeviceIndex="0,1")
+        logger.info({platform.getPropertyNames}")
         logger.info("Using GPU(s) for the calculations.")
 
     # This conditional block checks the simulation time format given,
