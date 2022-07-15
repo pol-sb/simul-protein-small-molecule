@@ -222,7 +222,7 @@ def simulate(
         pdb = app.pdbfile.PDBFile(folder + "sm_drg_traj.pdb")
         top = pdb.getTopology()
 
-        logger.info(f"in_traj top: {in_traj.topology}")
+        # logger.info(f"in_traj top: {in_traj.topology}")
 
         with open(
             f"./{name}/{int(temp)}/{name}_{temp}_{sm_mol[0]}_system.xml", "r"
@@ -402,9 +402,10 @@ def simulate(
             platform_props = dict(CudaPrecision="mixed", DeviceIndex="0")
         else:
             plat_gpu_str = str(plat_gpu).replace("[", "").replace("]", "")
-            logger.info(f"\nUsing GPU index(es): {plat_gpu_str}.")
+            logger.info(f"\nUsing GPU(s): {plat_gpu_str}.")
             platform = openmm.Platform.getPlatformByName("CUDA")
             platform_props = dict(CudaPrecision="mixed", DeviceIndex=plat_gpu_str)
+            logger.info(f"This platform's speed score: {platform.getSpeed()}")
 
     # This conditional block checks the simulation time format given,
     # allowing to simulate a certain number of seconds or a number of
@@ -478,6 +479,7 @@ def simulate(
             time_units=time_units,
             sigma=sigma,
             mass=mass_override,
+            extension=args.extend_thermostat,
         )
 
         logger.info("\nStarting simulation...\n")

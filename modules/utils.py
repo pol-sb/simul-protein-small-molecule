@@ -245,7 +245,16 @@ def read_parameters(path=""):
 
 
 def write_params(
-    path: str, name, temp, sm_mol, drg_param, sim_time, time_units, sigma, mass
+    path: str,
+    name,
+    temp,
+    sm_mol,
+    drg_param,
+    sim_time,
+    time_units,
+    sigma,
+    mass,
+    extension,
 ):
     with open(path, "w+") as f:
         f.write("# Simulation parameters\n")
@@ -266,6 +275,7 @@ def write_params(
         f.write(f"DRG_MASS\t{mass}\n")
         f.write(f"SIM_TIME\t{sim_time}\n")
         f.write(f"TIME_UNIT\t{time_units}\n")
+        f.write(f"EXTENSION\t{extension}\n")
 
 
 def send_notif(title, body, pb_token):

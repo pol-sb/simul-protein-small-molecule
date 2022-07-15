@@ -1,5 +1,6 @@
 import openmm
 import openmm.unit as unit
+import modules.utils as ut
 from openmm import XmlSerializer, app
 
 from modules.analyse import *
