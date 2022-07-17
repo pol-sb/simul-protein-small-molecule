@@ -1,5 +1,6 @@
 FUS/
 *.xml
+*.pdf
 *.log
 /*.xyz
 /*.pdb
@@ -8,3 +9,6 @@ paused_fus_prot_test.py
 test_openmm_local.py
 top
 modules/.pbtoken
+launcher.py
+
+pickle_to_csv.py
