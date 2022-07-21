@@ -90,7 +90,6 @@ def simulate(
 
     # Generates 100 new coordinates for the xy array, which must fulfill
     # certain conditions:
-
     for x, y in np.random.rand(1000, 2) * (L - marg) - (L - marg) / 2:
         x1 = x - L if x > 0 else x + L
         y1 = y - L if y > 0 else y + L
@@ -120,10 +119,6 @@ def simulate(
         for i in range(chain.n_atoms - 1):
             top.add_bond(chain.atom(i), chain.atom(i + 1))
 
-    # Saving a .pdb file with the current configuration. This file has 100
-    # protein strands spanning a long stretch of the z axis and completely
-    # straight
-
     # Storing the topology into a trajectory with one frame
     in_traj = md.Trajectory(
         np.array(pos).reshape(n_chains * N, 3),
@@ -144,8 +139,10 @@ def simulate(
     except FileExistsError:
         pass
 
+    # Saving a .pdb file with the current configuration. This file has 100
+    # protein strands spanning a long stretch of the z axis and completely
+    # straight.
     logger.info(f"Storing files in {os.getcwd()}/{name}/{int(temp)}/")
-
     in_traj.save_pdb(f"./{name}/{int(temp)}/top.pdb")
     pdb = app.pdbfile.PDBFile(f"./{name}/{int(temp)}/top.pdb")
 
@@ -535,7 +532,7 @@ def simulate(
             volume=True,
             elapsedTime=True,
             separator="\t",
-            append=append_mode
+            append=append_mode,
         )
     )
 
@@ -594,8 +591,9 @@ def simulate(
             name,
             temp,
             log_report_interval,
-            chk_reporter_flag
+            chk_reporter_flag,
         )
+
 
 if __name__ == "__main__":
     args = ut.arg_parse()

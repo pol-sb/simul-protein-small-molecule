@@ -140,6 +140,7 @@ def genParamsDH(df, name, prot, temp):
     fasta[-1] = "Z"
     r.loc["X", "q"] = r.loc[prot.fasta[0], "q"] + 1.0
     r.loc["Z", "q"] = r.loc[prot.fasta[-1], "q"] - 1.0
+
     # Calculate the prefactor for the Yukawa potential
     fepsw = (
         lambda T: 5321 / T

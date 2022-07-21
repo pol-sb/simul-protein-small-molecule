@@ -244,6 +244,35 @@ def read_parameters(path=""):
     return param_dict
 
 
+def create_hash(path=""):
+    """
+    Creates a unique hash for each simulation. This will allow to differentiate between
+    simulations with the same parameters but executed at different times/locations.
+
+    Parameters
+    ----------
+    path : str, optional
+        Path of a folder containing a 'parameters.dat' file, by default empty.
+
+    Returns
+    -------
+    str
+        Unique hash value for a given simulation.
+    """
+
+    # Getting parameters
+    p_dic = read_parameters(path)
+
+    # Preparing a tuple from the dictionary values. A tuple is needed because it is
+    # inmutable, needed for the hash function to work.
+    hash_tupl = tuple(p_dic.values())
+
+    # Creating a hash from the tuple and converting it to string.
+    hash_str = str(hash(hash_tupl))
+
+    return hash_str
+
+
 def write_params(
     path: str,
     name,
