@@ -1,0 +1,9 @@
+# environment.yaml
+
+name: idp-simul-smallmolec
+dependencies:
+  - python=3.8.10
+  - anaconda
+  - pip
+  - pip:
+    - -r file:requirements.txt
