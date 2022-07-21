@@ -386,6 +386,14 @@ def prepare_dict_list():
         except IOError:
             drg_avg = "None"
 
+        try:
+            if params["EXTENSION"] in [None, "None"]:
+                extension = None
+            else:
+                extension = params["EXTENSION"]
+        except KeyError:
+            extension = None
+
         sim_dict = {
             "protein": params["PROT_NAME"],
             "small_molec": drg_name,
@@ -396,6 +404,7 @@ def prepare_dict_list():
             "idp_average": np.loadtxt(path),
             "drg_average": drg_avg,
             "hash": hash_str,
+            "extension": extension,
         }
 
         dict_list.append(sim_dict)
