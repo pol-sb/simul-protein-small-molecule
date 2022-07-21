@@ -34,30 +34,32 @@ The rest of dependencies are included in both [environment.yaml](./modules/envir
 
 This section includes a brief walkthrough on how to install this toolkit using the conda package manager in a GNU/Linux system. As all of the required dependencies are included on the [environment.yaml](./modules/environment.yaml) file, the procedure is straightforward.
 
-First, open a terminal and create a directory where the script will be installed, then clone this repository:
+1. First, open a terminal and create a directory where the script will be installed, then clone this repository:
 
 ```bash
 cd $IDPWORKDIR
 git clone <this-repo-url>
 ```
 
-Once the repository is cloned, go into the [modules](./modules/) folder and run the following command in order to install all the required packages using the conda distribution:
+2. Once the repository is cloned, go into the [modules](./modules/) folder and run the following command in order to install all the required packages using the conda distribution:
 
 ```bash
 conda env create -f environment.yaml
 ```
 
-this will create a conda environment named `idp-simul-smallmolec`, which can be activated with:
+This will create a conda environment named `idp-simul-smallmolec`. This name can be changed by editing the `name:` line in the [environment.yaml](./modules/environment.yaml) file.
+
+3. Activate this environment with:
 
 ```
 conda activate idp-simul-smallmolec
 ```
 
-### Installing - Environment <a name = "cond_inst"></a>
+### Installing - Python Environment <a name = "cond_inst"></a>
 
 This section includes a brief walkthrough on how to install this toolkit into the main python distribution or into a given python environment (recommended) in a GNU/Linux system. This method requires compiling OpenMM from source and installing CUDA by hand. Additional python required dependencies are listed on the [requirements.txt](./modules/requirements.txt) file.
 
-1. First, create a python environment in which to install OpenMM and activate it. Leave this environment active for the remainder of this guide.
+1. First, create a python environment in which to install OpenMM and activate it. Leave this environment active for the remainder of this guide. Alternatively, everything could be installed in the main python distribution, but this is not recommended.
 
 2. Next, follow [the official OpenMM instructions](http://docs.openmm.org/latest/userguide/application/01_getting_started.html#installing-openmm) to compile and install OpenMM into the created python environment.
 
@@ -121,15 +123,52 @@ alias idp_simul="/<env-path>/bin/python3 /path/to/the/executable/simulate.py"
 ```
 Substitute `<env-path>` with your desired python environment path or `/<env-path>/bin/python3` with `python3` in order to use the main python distribution if OpenMM is installed there.
 
-The script includes an argument parser which requires several arguments:
-- `name`: name of the protein (e.g. `FUS`).
-- `temp`: temperature in Kelvin.
-
-An example of a command to run a simulation:
+Using this alias, here's an example of a command to run a simulation of 100 IDP chains at 310K adding 20mM coarse-grained GLY as the small molecule for 42000s using the GPUs 0 and 1:
 
 ```bash
-python3 simulate.py --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200
+idp_simul --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200 --gpu 0 1
 ```
+
+As shown above, the script includes an argument parser which requires several arguments. This is the intended way to use this toolkit.
+
+The available arguments are:
+- Main simulation parameters:
+    - `name NAME` or `-N NAME`:  Name of the protein sequence to be simulated.
+    - `temp TEMP` or `-T TEMP`:  Temperature (in K) of the system.
+
+- Small molecule parameters:
+
+    - `--small_molec RES CONC DISTANCE` or `-s RES CONC DISTANCE`: Residue Names (3 letter name, if using more than one residue, join them with a hyphen), concentration (in mM) and distance between particles (in A) of the small molecules to be added. For example: `ARG-LYS 0.005 0.5`
+
+    - `--lambd LAMBD [LAMBD ...]` or `--lam LAMBD [LAMBD ...]` or `--lmb LAMBD [LAMBD ...]`: List of float lambda values to use for the small molecules, given in the same order as the small molecules.
+
+    - `--sigma SIGMA [SIGMA ...]` or `--sig SIGMA [SIGMA ...]`: List of float sigma values to use for the small molecules, given in the same order as the small molecules.
+
+    - `--mass MASS [MASS ...]` or `-m MASS [MASS ...]`: List of float molar mass values to use for the small molecules, given in the same order as the small molecules.
+
+    - `--check_collision DISTANCE` or `--cc DISTANCE`
+                        If present, enables collision check after adding the small molecules into the system. Omit this option to disable the check.Takes a distance
+                        value (in A) between the small molecules and the protein to check for collision.
+
+- Output options:
+  - `-v` or `--verbose`: Increase output verbosity
+  - `-q` or `--quiet`: Decrease output verbosity
+
+- Simulation time selection:
+  - `--nsteps [NSTEPS]` or `--steps [NSTEPS]` or `-n [NSTEPS]`: Number of timesteps to run the simulation.
+  - `--time [NSECONDS]` or `--tsec [NSECONDS]` or `-t [NSECONDS]`: Number of seconds to run the simulation.
+
+- Simulation configuration:
+  - `--cpu`: Use the CPU as platform for the openmm.simulation.
+  - `--gpu GPUID [GPUID ...]`: Use the GPU as platform for the openmm.simulation. More than one GPU can be passed to this argument in order to use several GPUs.
+
+- Simulation post-treatment:
+  - `--extend_thermostat TEMP NSTEPS` or `--ethermo TEMP NSTEPS` or `--et TEMP NSTEPS`: If present, after finishing the main dynamics, modify the thermostat temperature and run the simulation for a given number of steps.
+  `extend_thermostat` takes two arguments: the first is the new temperature and the second is the number of steps to run the simulation.
+
+
+
+
 
 ## Results <a name = "results"></a>
 
