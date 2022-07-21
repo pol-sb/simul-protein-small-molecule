@@ -1,54 +1,142 @@
-# Protein Simulation
+# Simulation of small molecules on IDP systems
+
+![Simulation example](./docs/slab_test12.png)
 
 ## Table of Contents
 
 - [About](#about)
 - [Getting Started](#getting_started)
 - [Usage](#usage)
+- [Results](#results)
 - [Contributing](../CONTRIBUTING.md)
 
 ## About <a name = "about"></a>
 
-Scripts for the simulation of proteins with the capacity of introducing small molecules to the system and study their effects on protein separation.
+[OpenMM](https://openmm.org/)-based simulation toolkit aimed at the simulation of intrinsically disordered proteins with the capability of introducing coarse-grained small molecules into the system to study their effects on biological liquid-liquid phase separation.
 
 ## Getting Started <a name = "getting_started"></a>
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See [deployment](#deployment) for notes on how to deploy the project on a live system.
+These instructions will get you a copy of the project up and running on your local machine for development and performing simulations. 
 
 ### Prerequisites
 
-What things you need to install the software and how to install them.
+All of the modules from this simulation toolkit employ Python and use the OpenMM Molecular Dynamics python API, therefore `python>=3.8.10` is required.
+
+The OpenMM MD library is also needed. There is a straightforward way of installing OpenMM with the [conda package manager](https://docs.conda.io/). This repository includes a conda-compatible [environment.yaml](./modules/environment.yaml) file which already contains the correct OpenMM version for easy installation (more information in the [corresponding section](#cond_inst))
+
+Additionally, please see [the official OpenMM instructions](http://docs.openmm.org/latest/userguide/application/01_getting_started.html#installing-openmm) in order to get up-to-date information on how to compile from source.
+
+In order to be able to run the calculations on the GPU (strongly recommended), either CUDA or OpenCL can be employed. The conda environment dependency file includes the cudatoolkit package required to make use of CUDA on Nvidia GPUs. If OpenMM is compiled from source, CUDA will have to be installed manually.
+
+The rest of dependencies are included in both [environment.yaml](./modules/environment.yaml) and [requirements.txt](./modules/requirements.txt) files.
+
+### Installing - Conda <a name = "cond_inst"></a>
+
+This section includes a brief walkthrough on how to install this toolkit using the conda package manager in a GNU/Linux system. As all of the required dependencies are included on the [environment.yaml](./modules/environment.yaml) file, the procedure is straightforward.
+
+First, open a terminal and create a directory where the script will be installed, then clone this repository:
+
+```bash
+cd $IDPWORKDIR
+git clone <this-repo-url>
+```
+
+Once the repository is cloned, go into the [modules](./modules/) folder and run the following command in order to install all the required packages using the conda distribution:
+
+```bash
+conda env create -f environment.yaml
+```
+
+this will create a conda environment named `idp-simul-smallmolec`, which can be activated with:
 
 ```
-Give examples
+conda activate idp-simul-smallmolec
 ```
 
-### Installing
+### Installing - Environment <a name = "cond_inst"></a>
 
-A step by step series of examples that tell you how to get a development env running.
+This section includes a brief walkthrough on how to install this toolkit into the main python distribution or into a given python environment (recommended) in a GNU/Linux system. This method requires compiling OpenMM from source and installing CUDA by hand. Additional python required dependencies are listed on the [requirements.txt](./modules/requirements.txt) file.
 
-Say what the step will be
+1. First, create a python environment in which to install OpenMM and activate it. Leave this environment active for the remainder of this guide.
+
+2. Next, follow [the official OpenMM instructions](http://docs.openmm.org/latest/userguide/application/01_getting_started.html#installing-openmm) to compile and install OpenMM into the created python environment.
+
+3. Install a version of CUDA compatible with your GPU using your package manager of choice or with the official nvidia installer / compiling from source.
+
+4. Create an installation directory and clone this repository by running:
+
+```bash
+cd $IDPWORKDIR
+git clone <this-repo-url>
+```
+
+5. Change to the [modules](./modules/) folder and use the requirements.txt with pip to install the remaining dependencies:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+After this, the toolkit should be ready to be used in the 
+
+
+### Checking the installation <a name = "check_inst"></a>
+If installed correctly, the following command can be used in order to test OpenMM's correct installation and available [platforms](http://docs.openmm.org/latest/userguide/library/01_introduction.html#platforms):
+
+```bash
+python -m openmm.testInstallation
+```
+
+which should result in something similar to:
 
 ```
-Give the example
-```
+OpenMM Version: 7.7
+Git Revision: ad113a0cb37991a2de67a08026cf3b91616bafbe
 
-And repeat
+There are 4 Platforms available:
 
-```
-until finished
-```
+1 Reference - Successfully computed forces
+2 CPU - Successfully computed forces
+3 CUDA - Successfully computed forces
+4 OpenCL - Successfully computed forces
 
-End with an example of getting some data out of the system or using it for a little demo.
+Median difference in forces between platforms:
+
+Reference vs. CPU: 6.28782e-06
+Reference vs. CUDA: 6.72858e-06
+CPU vs. CUDA: 7.36916e-07
+Reference vs. OpenCL: 6.76294e-06
+CPU vs. OpenCL: 7.99247e-07
+CUDA vs. OpenCL: 2.66273e-07
+
+All differences are within tolerance.
+```
+The output from this command may vary depending on your configuration. If the command is being run on a compute cluster, please make sure that it is launched from a script commited into the the clusters queue manager in order to be executed in an actual node and not directly from the login node, as CUDA, OpenCL and even the CPU platforms may not be available on these nodes.
 
 ## Usage <a name = "usage"></a>
 
-To run simulations, execute the `simulate.py` script with your python environment. The script has an argument parser which requires two arguments:
+To run simulations, execute the `simulate.py` script with your python environment. An alias can be created in order to facilitate running the script from different directories:
+
+```
+alias idp_simul="/<env-path>/bin/python3 /path/to/the/executable/simulate.py"
+```
+Substitute `<env-path>` with your desired python environment path or `/<env-path>/bin/python3` with `python3` in order to use the main python distribution if OpenMM is installed there.
+
+The script includes an argument parser which requires several arguments:
 - `name`: name of the protein (e.g. `FUS`).
 - `temp`: temperature in Kelvin.
 
 An example of a command to run a simulation:
 
-```
+```bash
 python3 simulate.py --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200
 ```
+
+## Results <a name = "results"></a>
+
+The script produces several output files after a simulation.
+
+**WIP ...**
+
+## Running in a Computing Node
+
+**WIP ...**
