@@ -394,6 +394,22 @@ def prepare_dict_list():
         except KeyError:
             extension = None
 
+        try:
+            if params["TIME_UNIT"] in [None, "None"]:
+                time_unit = None
+            else:
+                time_unit = params["TIME_UNIT"]
+        except KeyError:
+            time_unit = None
+
+        try:
+            if params["SIM_TIME"] in [None, "None"]:
+                sim_time = None
+            else:
+                sim_time = params["SIM_TIME"]
+        except KeyError:
+            sim_time = None
+
         sim_dict = {
             "protein": params["PROT_NAME"],
             "small_molec": drg_name,
@@ -405,6 +421,8 @@ def prepare_dict_list():
             "drg_average": drg_avg,
             "hash": hash_str,
             "extension": extension,
+            "sim_time": sim_time,
+            "time_unit": time_unit,
         }
 
         dict_list.append(sim_dict)
