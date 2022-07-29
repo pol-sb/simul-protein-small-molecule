@@ -242,11 +242,22 @@ class CGdrug:
         # If two components are detected, add components to the drug description
         # objects.
         if len(n_comp) == 2:
+
+            # Printing debug information
             logger.debug(f"Detected 2 components: {n_comp}")
             logger.debug(f"Distance between components: {distance}")
+
+            # Creating description property which will be used inside the class
             self.description = {}
+
+            # Working with each small molecule center
             for ind, center in enumerate(centers):
+
+                # List that will contain the coordinates for a small molecule
                 drug_coor = []
+
+                # Computing the positions of each of the two elements in the small
+                # molecule and adding them to a list.
                 for i in [-1, 1]:
                     comp_coor = [
                         center[0] + ((distance / 2) * i),
@@ -258,16 +269,23 @@ class CGdrug:
 
                 self.description[ind] = {"coordinates": drug_coor}
 
+            # Creating a new object with all of the small molecule coordinates in
+            # an array
             coord_arr = []
             for drug in self.description.values():
                 for coord in drug["coordinates"]:
                     coord_arr.append(coord)
             self.coord_arr_drg = np.array(coord_arr)
 
+        # Case for small molecules with just one component
         elif len(n_comp) == 1:
+
+            # Printing debug information.
             logger.debug(f"Detected 1 component: {n_comp}")
 
             self.description = {}
+
+            # Declaring the position of the single component small molecule.
             for ind, center in enumerate(centers):
                 comp_coor = [
                     center[0],
@@ -290,23 +308,34 @@ class CGdrug:
             logger.debug(f"Distance between components: {distance}")
 
             self.description = {}
-            print("centers: ", centers)
+
+            # Working with each small molecule center
             for ind, center in enumerate(centers):
                 drug_coor = []
+
+                # Here, the odd numbered chain is split into two segments in order to be
+                # able to assign the distances differently for each segment.
+                # The first segment goes from the initial bead to the center bead, and
+                # the second segment goes from the middle bead until the last one.
+
+                # This loop assigns the positions of the beads in the first segment of
+                # the small molecule chain.
                 for i in range(-(len(n_comp) // 2), 1):
                     comp_coor = [
-                        center[0] + ((distance) * i),
+                        center[0],
                         center[1],
-                        center[2],
+                        center[2] + ((distance) * i),
                     ]
                     comp_coor = np.array(comp_coor)
                     drug_coor.append(comp_coor)
 
+                # This loop assigns the positions of the beads in the second segment of
+                # the small molecule chain.
                 for i in range(1, (len(n_comp) // 2) + 1):
                     comp_coor = [
-                        center[0] + ((distance) * i),
+                        center[0],
                         center[1],
-                        center[2],
+                        center[2] + ((distance) * i),
                     ]
 
                     comp_coor = np.array(comp_coor)
@@ -320,8 +349,49 @@ class CGdrug:
                     coord_arr.append(coord)
             self.coord_arr_drg = np.array(coord_arr)
 
-        # print('col_chk_flag: ', col_chk_flag)
-        # quit()
+        # If a larger than 2 even number of small molecule residues are given, use this
+        # method of assignment.
+        elif len(n_comp) > 2 and len(n_comp) % 2 == 0:
+
+            print("Detected", len(n_comp), "components.")
+
+            self.description = {}
+            for ind, center in enumerate(centers):
+                drug_coor = []
+
+                # Searching for the bead next to the chain center
+                near_middl_bead = center - np.array([0, 0, distance / 2])
+                init_bead = near_middl_bead
+
+                # Searching for the initial bead of the chain using the next to middle
+                # bead.
+                for i in range((len(n_comp) - 1) // 2):
+                    init_bead -= np.array([0, 0, distance])
+
+                drug_coor.append(init_bead)
+
+                # Starting from the initial bead, a bond distance is added to every
+                # bead's position in the z axis in order to build the chain.
+                for i in range(len(n_comp) - 1):
+                    comp_coor = [
+                        init_bead[0],
+                        init_bead[1],
+                        init_bead[2] + distance,
+                    ]
+                    init_bead = comp_coor
+                    comp_coor = np.array(comp_coor)
+                    drug_coor.append(comp_coor)
+
+                self.description[ind] = {"coordinates": drug_coor}
+
+            coord_arr = []
+            for drug in self.description.values():
+                for coord in drug["coordinates"]:
+                    coord_arr.append(coord)
+            self.coord_arr_drg = np.array(coord_arr)
+
+        # After the small molecules are added, the collision check is performed if
+        # the correct flag is given by the user at launch.
         self.collision_check(dist_threshold, enabled=col_chk_flag)
 
     def _create_topology(self):
