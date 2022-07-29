@@ -179,7 +179,11 @@ The available arguments are:
 
 ## Results <a name = "results"></a>
 
-The script produces several output files after a simulation.
+The script produces several output files after a simulation:
+
+- `parameters.dat`: Includes information about the user defined parameters used in the simulation
+
+- 
 
 🚧 **Work in progress...** 🚧
 
