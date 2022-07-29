@@ -14,10 +14,20 @@ def arg_parse():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
             "OpenMM script to run intrinsically disordered protein MD simulations"
-            " including small molecules in the system.\nAn example"
-            " command:\n\n\tsimulate.py --name Q5-8_20 --temp 323 --small_molec GLY 20"
-            " 0 --lmb 0 --sigma 0.45 -m 57.5 --time 43200 --cc"
-            " 10\n\n────────────────────────── Arguments ──────────────────────────"
+            " including small molecules in the system. Some examples:\n - An example"
+            " command to run a FUS protein simulation at 323K with a 20mM concentration"
+            " of a GLY-like small molecule, using 0 as the interaction strength, and "
+            "defining a size (sigma) and mass (mass) for the small molecule. The"
+            " simulation will run for 10000000 steps and using the gpu:"
+            "\n\n\tsimulate.py --name FUS --temp 323 --small_molec GLY 20"
+            " 0 --lmb 0 --sigma 0.45 -m 57.5 --nsteps 10000000 --cc 10 --gpu 0"
+            "\n\n - An example command to run a Q5-8_20 simulation at 315K using a "
+            "small molecule chain with 5 residues, while defining the interaction "
+            "strength of each residue. The simulation will run for 43200 seconds and"
+            " using the cpu:"
+            "\n\n\tsimulate.py --name Q5-8_20 --temp 315 --small_molec GLY-GLY-GLY-ARG-"
+            "GLY 1 0.5 --lmb 0.350 0.900 0.1 0.1 0.1 --time 43200 --cc 10 --cpu"
+            "\n\n────────────────────────── Arguments ──────────────────────────"
         ),
     )
 
@@ -56,7 +66,8 @@ def arg_parse():
         help=(
             "Residue Names (3 letter name, if more than one, joined by a hyphen),"
             " concentration (in mM) and distance between particles (in A) of the small"
-            " molecules to be added. \nFor example: ARG-LYS 0.005 0.5 "
+            " molecules to be added. \nFor example: "
+            "--small_molec ARG-LYS-GLY-GLY-GLY 20 0.5"
         ),
     )
 
@@ -69,6 +80,7 @@ def arg_parse():
         help=(
             "List of float lambda values to use for the small molecules, given "
             "in the same order as the small molecules."
+            "\nFor example: --lmbd 0.350 0.900 0.1 0.6 0.1"
         ),
     )
 

@@ -129,6 +129,13 @@ Using this alias, here's an example of a command to run a simulation of 100 IDP 
 idp_simul --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200 --gpu 0 1
 ```
 
+Another  example command to run a Q5-8_20 simulation at 315K using a small molecule chain with 5 residues, while defining the interaction strength of each residue. The simulation will run for 43200 seconds and using the cpu:
+
+```bash
+idp_simul --name Q5-8_20 --temp 315 --small_molec GLY-GLY-GLY-ARG-GLY 1 0.5 --lmb 0.350 0.900 0.1 0.1 0.1 --time 43200 --cc 10 -cpu
+```
+
+
 As shown above, the script includes an argument parser which requires several arguments. This is the intended way to use this toolkit.
 
 The available arguments are:
@@ -138,9 +145,9 @@ The available arguments are:
 
 - Small molecule parameters:
 
-    - `--small_molec RES CONC DISTANCE` or `-s RES CONC DISTANCE`: Residue Names (3 letter name, if using more than one residue, join them with a hyphen), concentration (in mM) and distance between particles (in A) of the small molecules to be added. For example: `ARG-LYS 0.005 0.5`
+    - `--small_molec RES CONC DISTANCE` or `-s RES CONC DISTANCE`: Residue Names (3 letter name, if using more than one residue, join them with a hyphen), concentration (in mM) and distance between particles (in A) of the small molecules to be added. For example: `--small_molec ARG-LYS-GLY-GLY-GLY 20 0.5`
 
-    - `--lambd LAMBD [LAMBD ...]` or `--lam LAMBD [LAMBD ...]` or `--lmb LAMBD [LAMBD ...]`: List of float lambda values to use for the small molecules, given in the same order as the small molecules.
+    - `--lambd LAMBD [LAMBD ...]` or `--lam LAMBD [LAMBD ...]` or `--lmb LAMBD [LAMBD ...]`: List of float lambda values to use for the small molecules, given in the same order as the small molecules. For example: `--lmbd 0.350 0.900 0.1 0.6 0.1`
 
     - `--sigma SIGMA [SIGMA ...]` or `--sig SIGMA [SIGMA ...]`: List of float sigma values to use for the small molecules, given in the same order as the small molecules.
 
