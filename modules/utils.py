@@ -17,6 +17,9 @@ def check_version(path, logger):
     # Checking the current repository commit
     try:
         os.chdir(path)
+
+        sb.call(['git', 'fetch'])
+
         local_version = (
             sb.check_output(["git", "describe", "--abbrev=40", "--always", "--long"])
             .decode("utf-8")
