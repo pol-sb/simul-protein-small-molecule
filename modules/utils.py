@@ -35,10 +35,10 @@ def check_version(path, logger):
 
         if local_version == remote_version:
             logger.info(
-                f"Version {local_version}.\nCurrent script version is up-to-date!"
+                f"\nVersion {local_version}.\nCurrent script version is up-to-date!"
             )
         else:
-            logger.warning(f"Version {local_version}.\n[!] Updates are available!")
+            logger.warning(f"\nVersion {local_version}.\n[!] Updates are available!")
 
     # If the update check fails this message is printed.
     except Exception:

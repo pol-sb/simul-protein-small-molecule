@@ -295,18 +295,22 @@ def simulate(
             # Checking if non default lambda was given.
             if lambd_override or lambd_override == 0:
                 lambdas = lambd_override[drg_ind]
-                logger.info(f"For {type_drg} using non-default lambda: {lambdas}")
+                logger.info(
+                    f"For {type_drg}-{drg_ind} using non-default lambda: {lambdas}"
+                )
             else:
                 lambdas = res_row["lambdas"][0]
-                logger.info(f"For {type_drg} using default lambda: {lambdas}")
+                logger.info(f"For {type_drg}-{drg_ind} using default lambda: {lambdas}")
 
             # Checking if non default sigma was given.
             if sigma_override or sigma_override == 0:
                 sigma = sigma_override[drg_ind]
-                logger.info(f"For {type_drg} using non-default sigma: {sigma}")
+                logger.info(
+                    f"For {type_drg}-{drg_ind} using non-default sigma: {sigma}"
+                )
             else:
                 sigma = res_row["sigmas"][0]
-                logger.info(f"For {type_drg} using default sigma: {sigma}")
+                logger.info(f"For {type_drg}-{drg_ind} using default sigma: {sigma}")
 
             for i in range(n_drugs):
                 # Yukawa Epsilon of the small molecules
