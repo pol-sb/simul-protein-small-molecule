@@ -88,7 +88,7 @@ If installed correctly, the following command can be used in order to test OpenM
 python -m openmm.testInstallation
 ```
 
-which should result in something similar to:
+which should result in an output similar to:
 
 ```
 OpenMM Version: 7.7
@@ -112,7 +112,9 @@ CUDA vs. OpenCL: 2.66273e-07
 
 All differences are within tolerance.
 ```
-The output from this command may vary depending on your configuration. If the command is being run on a compute cluster, please make sure that it is launched from a script commited into the the clusters queue manager in order to be executed in an actual node and not directly from the login node, as CUDA, OpenCL and even the CPU platforms may not be available on these nodes.
+The exact output from this command may vary depending on your configuration. 
+
+If the command is being run on a compute cluster, please make sure that it is launched from a script commited into the the clusters queue manager in order to be executed in an actual node and not directly from the login node, as CUDA, OpenCL and even the CPU platforms may not be available on these nodes.
 
 ## Usage <a name = "usage"></a>
 
@@ -175,14 +177,12 @@ The available arguments are:
 
 
 
-
-
 ## Results <a name = "results"></a>
 
 The script produces several output files after a simulation.
 
-**WIP ...**
+🚧 **Work in progress...** 🚧
 
 ## Running in a Computing Node
 
-**WIP ...**
+🚧 **Work in progress...** 🚧
