@@ -18,7 +18,7 @@ def check_version(path, logger):
     try:
         os.chdir(path)
 
-        sb.call(['git', 'fetch'])
+        sb.call(["git", "fetch"], stdout=sb.DEVNULL, stderr=sb.STDOUT)
 
         local_version = (
             sb.check_output(["git", "describe", "--abbrev=40", "--always", "--long"])
@@ -38,9 +38,7 @@ def check_version(path, logger):
                 f"Version {local_version}.\nCurrent script version is up-to-date!"
             )
         else:
-            logger.warning(
-                f"Version {local_version}.\nUpdates are available!"
-            )
+            logger.warning(f"Version {local_version}.\n[!] Updates are available!")
 
     # If the update check fails this message is printed.
     except Exception:
