@@ -9,6 +9,44 @@ import pandas as pd
 import requests
 
 
+def check_version(path, logger):
+
+    # Saving original path
+    orig_path = os.getcwd()
+
+    # Checking the current repository commit
+    try:
+        os.chdir(path)
+        local_version = (
+            sb.check_output(["git", "describe", "--abbrev=40", "--always", "--long"])
+            .decode("utf-8")
+            .strip()
+        )
+        remote_version = (
+            sb.check_output(
+                ["git", "describe", "--abbrev=40", "--always", "--long", "origin/main"]
+            )
+            .decode("utf-8")
+            .strip()
+        )
+
+        if local_version == remote_version:
+            logger.info(
+                f"Version {local_version}.\nCurrent script version is up-to-date!"
+            )
+        else:
+            logger.warning(
+                f"Version {local_version}.\nUpdates are available!"
+            )
+
+    # If the update check fails this message is printed.
+    except Exception:
+        logger.warning("Could not check version!")
+
+    # Returning to the original path.
+    os.chdir(orig_path)
+
+
 def arg_parse():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,

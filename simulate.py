@@ -601,7 +601,12 @@ if __name__ == "__main__":
     # Custom logger for easier debugging, using the python logging module.
     logger, verbosity = ut.custom_logger(args)
 
+    # Getting the main script path
     real_path = os.path.split(os.path.realpath(__file__))[0]
+
+    # Checking the current script version.
+    ut.check_version(real_path, logger)
+
     residues = pd.read_csv(f"{real_path}/data/residues.csv").set_index(
         "three", drop=False
     )
