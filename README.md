@@ -132,7 +132,7 @@ idp_simul --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200 --gpu 0 
 Another  example command to run a Q5-8_20 simulation at 315K using a small molecule chain with 5 residues, while defining the interaction strength of each residue. The simulation will run for 43200 seconds and using the cpu:
 
 ```bash
-idp_simul --name Q5-8_20 --temp 315 --small_molec GLY-GLY-GLY-ARG-GLY 1 0.5 --lmb 0.350 0.900 0.1 0.1 0.1 --time 43200 --cc 10 -cpu
+idp_simul --name Q5-8_20 --temp 315 --small_molec GLY-GLY-GLY-ARG-GLY 1 0.5 --lmb 0.350 0.900 0.1 0.1 0.1 --time 43200 --cc 10 --cpu
 ```
 
 
