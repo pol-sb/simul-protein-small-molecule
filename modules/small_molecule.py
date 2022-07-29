@@ -98,21 +98,22 @@ def add_drugs(
     # is more than one sigma given
     volume = 0
     for sigma in sigmas:
-        volume += ((4 / 3) * np.pi * ((sigma/2)**3)) * num_part
+        volume += ((4 / 3) * np.pi * ((sigma / 2) ** 3)) * num_part
     logger.info(f"Volume* occupied by the small molecules: {round(volume, 2)}")
-
 
     # Adding the small molecules to the system. Each AA has its own molecular
     # weight.
     if mass_override:
         for drg_ind, drg_typ in enumerate(drug_components):
-            print(f"For {drg_typ} using non-default mass: {mass_override[drg_ind]}")
+            logger.info(
+                f"For {drg_typ} using non-default mass: {mass_override[drg_ind]}"
+            )
             for part in range(num_part):
                 system.addParticle(mass_override[drg_ind] * unit.amu)
     else:
         for drg_typ in drug_components:
             res_row = residues.loc[residues["three"] == f"{drg_typ}"]
-            print(f"For {drg_typ} using default mass: {res_row['MW'][0]}")
+            logger.info(f"For {drg_typ} using default mass: {res_row['MW'][0]}")
             for part in range(num_part):
                 system.addParticle(res_row["MW"][0] * unit.amu)
 
@@ -238,6 +239,8 @@ class CGdrug:
 
     def _add_components(self, centers, n_comp, distance, dist_threshold, col_chk_flag):
 
+        # If two components are detected, add components to the drug description
+        # objects.
         if len(n_comp) == 2:
             logger.debug(f"Detected 2 components: {n_comp}")
             logger.debug(f"Distance between components: {distance}")
@@ -279,8 +282,43 @@ class CGdrug:
                 coord_arr.append(drug["coordinates"])
             self.coord_arr_drg = np.array(coord_arr)
 
-        else:
-            logger.critical(f"{len(n_comp)} components not supported.")
+        # If a larger than 2 odd number of small molecule residues are given, use this
+        # method of assignment.
+        elif len(n_comp) > 2 and len(n_comp) % 2 != 0:
+
+            logger.debug(f"Detected {len(n_comp)} components: {n_comp}")
+            logger.debug(f"Distance between components: {distance}")
+
+            self.description = {}
+            print("centers: ", centers)
+            for ind, center in enumerate(centers):
+                drug_coor = []
+                for i in range(-(len(n_comp) // 2), 1):
+                    comp_coor = [
+                        center[0] + ((distance) * i),
+                        center[1],
+                        center[2],
+                    ]
+                    comp_coor = np.array(comp_coor)
+                    drug_coor.append(comp_coor)
+
+                for i in range(1, (len(n_comp) // 2) + 1):
+                    comp_coor = [
+                        center[0] + ((distance) * i),
+                        center[1],
+                        center[2],
+                    ]
+
+                    comp_coor = np.array(comp_coor)
+                    drug_coor.append(comp_coor)
+
+                self.description[ind] = {"coordinates": drug_coor}
+
+            coord_arr = []
+            for drug in self.description.values():
+                for coord in drug["coordinates"]:
+                    coord_arr.append(coord)
+            self.coord_arr_drg = np.array(coord_arr)
 
         # print('col_chk_flag: ', col_chk_flag)
         # quit()
