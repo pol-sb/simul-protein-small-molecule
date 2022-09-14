@@ -387,7 +387,7 @@ def write_params(
         sigma,
         mass,
         extension,
-        time.strftime('%d.%m.%Y - %H:%M:%S')
+        time.strftime("%d.%m.%Y - %H:%M:%S"),
     ]
 
     hash_str = create_hash(param_list)
@@ -459,7 +459,7 @@ def prepare_dict_list():
 
         fold_n = "/".join(path.split("/")[:-1]) + "/"
         params = read_parameters(fold_n)
-        hash_str = create_hash(fold_n)
+        # hash_str = create_hash(fold_n)
 
         if params["DRG_LAMB"] in [None, "None"]:
             lamb = None
@@ -516,6 +516,14 @@ def prepare_dict_list():
                 sim_time = params["SIM_TIME"]
         except KeyError:
             sim_time = None
+
+        try:
+            if params["HASH"] in [None, "None"]:
+                hash_str = None
+            else:
+                hash_str = params["HASH"]
+        except KeyError:
+            hash_str = None
 
         sim_dict = {
             "protein": params["PROT_NAME"],
@@ -578,7 +586,6 @@ def generate_db():
 
 
 def save_db(data_df):
-    print(data_df)
 
     save = input("Save the database? (y/n) ")
 
