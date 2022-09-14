@@ -296,10 +296,11 @@ def read_parameters(path=""):
     return param_dict
 
 
-def create_hash(path=""):
+def create_hash_path(path=""):
     """
-    Creates a unique hash for each simulation. This will allow to differentiate between
-    simulations with the same parameters but executed at different times/locations.
+    Creates a unique hash for each simulation, using the file path.
+    This will allow to differentiate between simulations with the same parameters but
+    executed at different times/locations.
 
     Parameters
     ----------
@@ -325,6 +326,44 @@ def create_hash(path=""):
     return hash_str
 
 
+def create_hash(params):
+    """
+    Creates a unique hash for each simulation. This will allow to differentiate between
+    simulations with the same parameters but executed at different times/locations.
+
+    Parameters
+    ----------
+    params : list
+        List containing all of the simulation parameters.
+
+    Returns
+    -------
+    str
+        Unique hash value for a given simulation.
+    """
+
+    # Preparing a tuple from the dictionary values. A tuple is needed because it is
+    # inmutable, needed for the hash function to work.
+    tupled_list = []
+
+    for param in params:
+        if type(param) == list:
+            for p in param:
+                if type(p) == list:
+                    tupled_list.append(tuple(p))
+                else:
+                    tupled_list.append(p)
+        else:
+            tupled_list.append(param)
+
+    hash_tupl = tuple(tupled_list)
+
+    # Creating a hash from the tuple and converting it to string.
+    hash_str = str(hash(hash_tupl))
+
+    return hash_str
+
+
 def write_params(
     path: str,
     name,
@@ -337,6 +376,22 @@ def write_params(
     mass,
     extension,
 ):
+
+    param_list = [
+        name,
+        temp,
+        sm_mol,
+        drg_param,
+        sim_time,
+        time_units,
+        sigma,
+        mass,
+        extension,
+        time.strftime('%d.%m.%Y - %H:%M:%S')
+    ]
+
+    hash_str = create_hash(param_list)
+
     with open(path, "w+") as f:
         f.write("# Simulation parameters\n")
         f.write(f"# {time.strftime('%d.%m.%Y - %H:%M:%S')}\n\n")
@@ -357,6 +412,7 @@ def write_params(
         f.write(f"SIM_TIME\t{sim_time}\n")
         f.write(f"TIME_UNIT\t{time_units}\n")
         f.write(f"EXTENSION\t{extension}\n")
+        f.write(f"HASH\t{hash_str}\n")
 
 
 def send_notif(title, body, pb_token):
