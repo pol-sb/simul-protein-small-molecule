@@ -179,14 +179,14 @@ The available arguments are:
 
 ## Results <a name = "results"></a>
 
-The script produces several output files after a simulation:
+The script produces several output files after a simulation. Using as an example `XXXX` for the protein name, `YYY` for the temperature and `ZZZ` for the small-molecule name:
 
 - `parameters.dat`: Includes information about the user defined parameters used in the simulation
 
-- 
+- `XXXX_YYY_ZZZ_report.dcd`: Trajectory file containing the particle positions at every timestep of the simulation.
 
-🚧 **Work in progress...** 🚧
+- `sm_drg_traj.pdb`: PDB file containing the description and positions of the initial system configuration.
 
-## Running in a Computing Node
+- `XXXX_YYY.log`: Log file containing information about the system's energies, performance and simulation times.
 
-🚧 **Work in progress...** 🚧
+A dataframe containing of some of the most important results obtained from the simulations can be found in the [results](./results/) folder. The dataframe can be accessed using [pandas](https://pandas.pydata.org/). Some sample visualizations and usage examples are included in a python notebook on the same directory.
