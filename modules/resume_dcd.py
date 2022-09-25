@@ -51,7 +51,7 @@ simulation.context.setPositions(posc)
 
 simulation.reporters.append(
     app.dcdreporter.DCDReporter("resumed_report.dcd",
-        10,
+        50000,
         append=False,
     )
 )
@@ -59,7 +59,7 @@ simulation.reporters.append(
 simulation.reporters.append(
     app.statedatareporter.StateDataReporter(
         f"resumed_simulation.log",
-        reportInterval=10,
+        reportInterval=1000,
         potentialEnergy=True,
         temperature=True,
         step=True,
