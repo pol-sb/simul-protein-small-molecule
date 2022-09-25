@@ -330,7 +330,9 @@ def simulate(
                 )
 
         # Adding bonds between the small molecules.
-        if len(sm_mol[0].split("-")) >= 2:
+        sm_chain_length = len(sm_mol[0].split("-"))
+        if sm_chain_length <= 2:
+            print('len(sm_mol[0].split("-")): ', len(sm_mol[0].split("-")))
             for i in range(
                 n_parts_old,
                 n_parts_old + (n_drugs * len(sm_mol[0].split("-"))) - 1,
@@ -347,32 +349,32 @@ def simulate(
                 # potentials
                 yu.addExclusion(i, i + 1)
                 ah.addExclusion(i, i + 1)
-        # else:
-        #     logger.critical(
-        #         "[!] Harmonic bond for small molecules with more than "
-        #         "two components not yet supported"
-        #     )
+        else:
+            # Counter to keep track of the total number of added particles.
+            sm_cnt = n_parts_old
 
-        #     print('comp_dist: ', comp_dist)
+            for i in range(n_drugs):
+                logger.debug("\nChain", i)
 
-        #     for i in range(
-        #         n_parts_old,
-        #         n_parts_old + (n_drugs * len(sm_mol[0].split("-"))) - 1,
-        #     ):
-        #         print(f"\nbond: {i}-{i+1}")
-        #         a = hb.addBond(
-        #             i,
-        #             i + 1,
-        #             comp_dist * unit.nanometer,
-        #             8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
-        #         )
+                for j in range(sm_chain_length - 1):
+                    logger.debug(f"bond: {sm_cnt}-{sm_cnt+1}")
+                    hb.addBond(
+                        sm_cnt,
+                        sm_cnt + 1,
+                        comp_dist * unit.nanometer,
+                        8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
+                    )
 
-        #         # Important, this makes pairs do not affect eachother with non bonded
-        #         # potentials
-        #         yu.addExclusion(i, i + 1)
-        #         ah.addExclusion(i, i + 1)
+                    # Important, this makes pairs do not affect eachother with non bonded
+                    # potentials.
+                    yu.addExclusion(sm_cnt, sm_cnt + 1)
+                    ah.addExclusion(sm_cnt, sm_cnt + 1)
 
-        #     quit()
+                    # Increasing the atom count by one for every atom in the chain.
+                    sm_cnt += 1
+
+                # Adding one to the atom count to avoid connecting two chains by their first and and first atoms.
+                sm_cnt += 1
 
     logger.debug(f"ah:, {ah.getNumParticles()}")
     logger.debug(f"yu:, {yu.getNumParticles()}")
