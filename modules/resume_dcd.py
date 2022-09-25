@@ -71,7 +71,7 @@ simulation.reporters.append(
     )
 )
 
-simulation.step(1000)
+simulation.step(300000000)
 
 
     
