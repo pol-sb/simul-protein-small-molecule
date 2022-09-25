@@ -20,15 +20,15 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Prerequisites
 
-All of the modules from this simulation toolkit employ Python and use the OpenMM Molecular Dynamics python API, therefore `python>=3.8.10` is required.
+All of the modules from this simulation toolkit employ Python and use the OpenMM Molecular Dynamics python API, therefore a `python>=3.8.10` installation with several dependencies is required.
 
-The OpenMM MD library is also needed. There is a straightforward way of installing OpenMM with the [conda package manager](https://docs.conda.io/). This repository includes a conda-compatible [environment.yaml](./modules/environment.yaml) file which already contains the correct OpenMM version for easy installation (more information in the [corresponding section](#cond_inst))
+The OpenMM MD library is needed. There is a straightforward way of installing OpenMM with the [conda package manager](https://docs.conda.io/). This repository includes a conda-compatible [environment.yaml](./modules/environment.yaml) file which already contains the correct OpenMM version for easy installation (more information in the [corresponding section](#cond_inst))
 
-Additionally, please see [the official OpenMM instructions](http://docs.openmm.org/latest/userguide/application/01_getting_started.html#installing-openmm) in order to get up-to-date information on how to compile from source.
+Please check [the official OpenMM instructions](http://docs.openmm.org/latest/userguide/application/01_getting_started.html#installing-openmm) in order to get up-to-date information on how to compile from source.
 
 In order to be able to run the calculations on the GPU (strongly recommended), either CUDA or OpenCL can be employed. The conda environment dependency file includes the cudatoolkit package required to make use of CUDA on Nvidia GPUs. If OpenMM is compiled from source, CUDA will have to be installed manually.
 
-The rest of dependencies are included in both [environment.yaml](./modules/environment.yaml) and [requirements.txt](./modules/requirements.txt) files.
+The remaining python dependencies are included in both [environment.yaml](./modules/environment.yaml) and [requirements.txt](./modules/requirements.txt) files.
 
 ### Installing - Conda <a name = "cond_inst"></a>
 

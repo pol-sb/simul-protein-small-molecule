@@ -236,6 +236,8 @@ def simulate(
     # Adding our custom energy expression for a LJ type interaction to use in
     # the FF. It is non bonded as LJ is not bonded. Ashbaugh-Hatch (ah)
     # functional form.
+
+    # Original lambda interaction definition: l=0.5*(l1+l2)
     energy_expression = "select(step(r-2^(1/6)*s),4*eps*l*((s/r)^12-(s/r)^6),4*eps*((s/r)^12-(s/r)^6)+eps*(1-l))"
     ah = openmm.openmm.CustomNonbondedForce(
         energy_expression + "; s=0.5*(s1+s2); l=0.5*(l1+l2)"
@@ -284,11 +286,12 @@ def simulate(
             yu.addExclusion(i, i + 1)
             ah.addExclusion(i, i + 1)
 
-    # Adding the small drug particles to the CustomNonbondedForce used in
-    # # the system. n_drugs (number of small molecules) by 2 (bimolecular).
+    # Adding the small drug particles to the CustomNonbondedForce used in the system.
+    # n_drugs (number of small molecules) by 2 (bimolecular).
     # TODO: Allow to choose which AA is used instead of just Glycine.
     if sm_mol:
         for drg_ind, type_drg in enumerate(sm_mol[0].split("-")):
+
             # Finding the row of the AA corresponding to our type of molecule.
             res_row = residues.loc[residues["three"] == f"{type_drg}"]
 
@@ -313,6 +316,7 @@ def simulate(
                 logger.info(f"For {type_drg}-{drg_ind} using default sigma: {sigma}")
 
             for i in range(n_drugs):
+
                 # Yukawa Epsilon of the small molecules
                 yu.addParticle(
                     [res_row["q"][0] * unit.nanometer * unit.kilojoules_per_mole]
@@ -326,23 +330,49 @@ def simulate(
                 )
 
         # Adding bonds between the small molecules.
-        if len(sm_mol[0].split("-")) == 2:
+        if len(sm_mol[0].split("-")) >= 2:
             for i in range(
                 n_parts_old,
                 n_parts_old + (n_drugs * len(sm_mol[0].split("-"))) - 1,
             ):
                 # print(f"\nbond: {i}-{i+1}")
-                a = hb.addBond(
+                hb.addBond(
                     i,
                     i + 1,
                     comp_dist * unit.nanometer,
                     8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
                 )
 
-                # Important, this makes pair noname + "/{:d}/{:s}.dcd".format(temp, name)t affect eachother with non
-                # bonded potentials
+                # Important, this makes pairs do not affect eachother with non bonded
+                # potentials
                 yu.addExclusion(i, i + 1)
                 ah.addExclusion(i, i + 1)
+        # else:
+        #     logger.critical(
+        #         "[!] Harmonic bond for small molecules with more than "
+        #         "two components not yet supported"
+        #     )
+
+        #     print('comp_dist: ', comp_dist)
+
+        #     for i in range(
+        #         n_parts_old,
+        #         n_parts_old + (n_drugs * len(sm_mol[0].split("-"))) - 1,
+        #     ):
+        #         print(f"\nbond: {i}-{i+1}")
+        #         a = hb.addBond(
+        #             i,
+        #             i + 1,
+        #             comp_dist * unit.nanometer,
+        #             8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
+        #         )
+
+        #         # Important, this makes pairs do not affect eachother with non bonded
+        #         # potentials
+        #         yu.addExclusion(i, i + 1)
+        #         ah.addExclusion(i, i + 1)
+
+        #     quit()
 
     logger.debug(f"ah:, {ah.getNumParticles()}")
     logger.debug(f"yu:, {yu.getNumParticles()}")
@@ -351,7 +381,8 @@ def simulate(
     ah.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
     hb.setUsesPeriodicBoundaryConditions(True)
 
-    # TODO: Ask about the cutoff. Another line above.
+    # Setting the cutoff. Using the value of 4nm, but it can be modified.
+    # Another line above.
     yu.setCutoffDistance(4 * unit.nanometer)
     ah.setCutoffDistance(4 * unit.nanometer)
 
@@ -647,7 +678,7 @@ if __name__ == "__main__":
     logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")
 
     # Attempting to send a push notification to a pushbullet account to notify the
-    # end of the simulation. Needs an API key which has to be stored in the file
+    # end of the simulation. Needs a pushbullet API key which has to be stored in the file
     # ./modules/.pbtoken
     try:
         with open(f"{real_path}/modules/.pbtoken", "r") as f:
