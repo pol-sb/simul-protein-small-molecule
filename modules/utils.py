@@ -48,30 +48,40 @@ def check_version(path, logger):
     os.chdir(orig_path)
 
 
-def arg_parse():
-    parser = argparse.ArgumentParser(
+def add_simulargs_to_subparser(subparser):
+    subp1 = subparser.add_parser(
+        "simulate",
+        aliases=["sim"],
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="This command allows to run IDP simulations including optional small molecules.",
         description=(
-            "OpenMM script to run intrinsically disordered protein MD simulations"
-            " including small molecules in the system. Some examples:\n - An example"
+            " _     _                 _                 _ \n"
+            "(_) __| |_ __        ___(_)_ __ ___  _   _| |\n"
+            "| |/ _` | '_ \ _____/ __| | '_ ` _ \| | | | |\n"
+            "| | (_| | |_) |_____\__ \ | | | | | | |_| | |\n"
+            "|_|\__,_| .__/      |___/_|_| |_| |_|\__,_|_|\n"
+            "        |_|                                  \n\n"
+            "This command allows to run IDP simulations including optional small molecules.\n"
+            "See below for some usage examples."
+        ),
+        epilog=(
+            "\n\nUsage:\n\n - An example"
             " command to run a FUS protein simulation at 323K with a 20mM concentration"
-            " of a GLY-like small molecule, using 0 as the interaction strength, and "
+            " of a GLY-like small molecule, using 0 for its interaction strength, and "
             "defining a size (sigma) and mass (mass) for the small molecule. The"
-            " simulation will run for 10000000 steps and using the gpu:"
-            "\n\n\tsimulate.py --name FUS --temp 323 --small_molec GLY 20"
+            " simulation will run for 10000000 steps and using the gpu with ID 0:"
+            "\n\n\tidp-simul simulate --name FUS --temp 323 --small_molec GLY 20"
             " 0 --lmb 0 --sigma 0.45 -m 57.5 --nsteps 10000000 --cc 10 --gpu 0"
             "\n\n - An example command to run a Q5-8_20 simulation at 315K using a "
             "small molecule chain with 5 residues, while defining the interaction "
             "strength of each residue. The simulation will run for 43200 seconds and"
             " using the cpu:"
-            "\n\n\tsimulate.py --name Q5-8_20 --temp 315 --small_molec GLY-GLY-GLY-ARG-"
-            "GLY 1 0.5 --lmb 0.350 0.900 0.1 0.1 0.1 --time 43200 --cc 10 --cpu"
-            "\n\n────────────────────────── Arguments ──────────────────────────"
+            "\n\n\tidp-simul simulate --name Q5-8_20 --temp 315 --small_molec GLY-GLY-GLY-ARG-"
+            "GLY 1 0.5 --lmb 0.350 0.900 0.1 0.1 0.1 --time 43200 --cc 10 --cpu\n"
+            "When a simulation is started, a folder named after the protein name will be created"
         ),
     )
-
-    g1 = parser.add_argument_group("Simulation parameters")
-
+    g1 = subp1.add_argument_group(title="Simulation parameters")
     g1.add_argument(
         "--name",
         "-N",
@@ -92,7 +102,7 @@ def arg_parse():
         required=True,
     )
 
-    g3 = parser.add_argument_group("Small molecule parameters")
+    g3 = subp1.add_argument_group("Small molecule parameters")
 
     g3.add_argument(
         "--small_molec",
@@ -159,7 +169,7 @@ def arg_parse():
         ),
     )
 
-    g4 = parser.add_argument_group("Output options")
+    g4 = subp1.add_argument_group("Output options")
 
     g4.add_argument(
         "-v",
@@ -175,7 +185,7 @@ def arg_parse():
         action="store_true",
     )
 
-    g2 = parser.add_argument_group("Simulation time selection")
+    g2 = subp1.add_argument_group("Simulation time selection")
     g2_1 = g2.add_mutually_exclusive_group(required=True)
 
     g2_1.add_argument(
@@ -200,7 +210,7 @@ def arg_parse():
         help="Number of seconds to run the simulation.",
     )
 
-    g_sim = parser.add_argument_group("Simulation configuration")
+    g_sim = subp1.add_argument_group("Simulation configuration")
     g_sim_2 = g_sim.add_mutually_exclusive_group(required=True)
 
     g_sim_2.add_argument(
@@ -213,10 +223,13 @@ def arg_parse():
         nargs="+",
         metavar="GPUID",
         type=int,
-        help="Use the GPU as platform for the openmm.simulation. More than ",
+        help=(
+            "Use the GPU as platform for the openmm.simulation. "
+            "Several GPUs can be used at once by passing their indexes separated by a space."
+        ),
     )
 
-    ex_sim = parser.add_argument_group("Simulation post-treatment")
+    ex_sim = subp1.add_argument_group("Simulation post-treatment")
 
     ex_sim.add_argument(
         "--extend_thermostat",
@@ -232,6 +245,92 @@ def arg_parse():
             "temperature and the second is the number of steps to run the "
             "simulation."
         ),
+    )
+
+    return subparser
+
+
+def arg_parse():
+    parser = argparse.ArgumentParser(
+        prog="idp-simul",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=(
+            " _     _                 _                 _ \n"
+            "(_) __| |_ __        ___(_)_ __ ___  _   _| |\n"
+            "| |/ _` | '_ \ _____/ __| | '_ ` _ \| | | | |\n"
+            "| | (_| | |_) |_____\__ \ | | | | | | |_| | |\n"
+            "|_|\__,_| .__/      |___/_|_| |_| |_|\__,_|_|\n"
+            "        |_|                                  \n\n"
+            "OpenMM script to run intrinsically disordered protein (IDP) molecular"
+            " dynamics simulations with the capability of including user-defined "
+            "small molecules in the system."
+        ),
+    )
+
+    sim_par = parser.add_subparsers(
+        title="Operation Modes",
+        description="Subcommands that are used to select the operation mode of the program.",
+        required=True,
+        dest="subparser_name"
+    )
+
+    subp1 = add_simulargs_to_subparser(sim_par)
+
+    subp2 = sim_par.add_parser(
+        "check_version",
+        help="This command allows to check the program's version.",
+        description="This command allows to check the program's version.",
+    )
+
+    subp3 = sim_par.add_parser(
+        "database",
+        help="Commands related to working with the IDP simulations database.",
+        description="Commands related to working with the IDP simulations database.",
+    )
+
+    subp4 = sim_par.add_parser(
+        "tests",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        help="Run several tests in order to check several IDP properties.",
+        description="Run several tests in order to check several IDP properties.\n"
+        "Available tests shown below.",
+    )
+
+    subp4_tests = subp4.add_subparsers(
+        title="Test types",
+        description="Subcommands that are used to select which tests are run.",
+        required=True,
+        dest="test_name"
+    )
+
+    subp_montecarlo = subp4_tests.add_parser(
+        "dynamic-minimize",
+        # parents=[sim_par],
+        aliases=["dynmin", "montecarlo"],
+        help="This command allows to iteratively minimize the energy of an IDP system.",
+        description="Run short molecular dynamics simulations in a certain IDP system containing"
+        " small molecules and accept the trajectory if the energy is reduced.",
+    )
+
+    g0 = subp_montecarlo.add_argument_group(title="Minimization parameters")
+    g0.add_argument(
+        "--runs",
+        "-N",
+        nargs=1,
+        type=str,
+        metavar="NAME",
+        help="Name of the protein sequence to be simulated.",
+        required=True,
+    )
+
+    g0.add_argument(
+        "--temp",
+        "-T",
+        nargs=1,
+        type=int,
+        metavar="TEMP",
+        help="Temperature (in K) of the system.",
+        required=True,
     )
 
     args = parser.parse_args()
