@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 from ast import literal_eval
@@ -12,22 +13,37 @@ import modules.utils as ut
 from modules.analyse import *
 
 
-def simulate(
-    residues,
-    name,
-    prot,
-    temp,
-    sm_mol,
-    sim_time,
-    verbosity,
-    plat_cpu,
-    plat_gpu,
-    check_collision,
-    lambd_override,
-    sigma_override,
-    mass_override,
-):
-    folder = name + f"/{int(temp)}/"
+def simulate(args):
+    # arg_dict = args.__dict__
+
+    residues = args.residues
+    name = args.name[0]
+    prot = proteins.loc[args.name[0]]
+    temp = args.temp[0]
+    sm_mol = args.small_molec
+    sim_time = [args.time, args.nsteps]
+    verbosity = args.verbosity
+    plat_cpu = args.cpu
+    plat_gpu = args.gpu
+    check_collision = args.check_collision
+    lambd_override = args.lambd
+    sigma_override = args.sigma
+    mass_override = args.mass
+    # print('sim_time: ', sim_time)
+    # print('sm_mol: ', sm_mol)
+    # print('temp: ', temp)
+    # print('prot: ', prot)
+    # print('name: ', name)
+    # print('verbosity: ', verbosity)
+    # print('plat_cpu: ', plat_cpu)
+    # print('plat_gpu: ', plat_gpu)
+    # print('check_collision: ', check_collision)
+    # print('lambd_override: ', lambd_override)
+    # print('sigma_override: ', sigma_override)
+    # print('mass_override: ', mass_override)
+    # quit()
+
+    folder = name + f"/{temp}/"
 
     try:
         check_point = folder + f"{name}_{temp}_{sm_mol[0]}_restart.chk"
@@ -207,6 +223,9 @@ def simulate(
         logger.info("\nReading small molecules from stored files...")
         top_ats = pd.read_csv(folder + "sm_drg_ats.csv")
 
+        # TODO: Add a way of getting the comp_dist used in a simulation
+        # when resuming
+
         # This was before: n_drugs = (len(top_ats) - n_parts_old) // 2
         n_drugs = len(top_ats) - n_parts_old
         logger.info(f"number of drugs: {n_drugs}")
@@ -288,7 +307,6 @@ def simulate(
 
     # Adding the small drug particles to the CustomNonbondedForce used in the system.
     # n_drugs (number of small molecules) by 2 (bimolecular).
-    # TODO: Allow to choose which AA is used instead of just Glycine.
     if sm_mol:
         for drg_ind, type_drg in enumerate(sm_mol[0].split("-")):
 
@@ -331,33 +349,30 @@ def simulate(
 
         # Adding bonds between the small molecules.
         sm_chain_length = len(sm_mol[0].split("-"))
-        if sm_chain_length <= 2:
-            print('len(sm_mol[0].split("-")): ', len(sm_mol[0].split("-")))
+
+        if sm_chain_length == 1:
             for i in range(
                 n_parts_old,
                 n_parts_old + (n_drugs * len(sm_mol[0].split("-"))) - 1,
             ):
-                # print(f"\nbond: {i}-{i+1}")
-                hb.addBond(
-                    i,
-                    i + 1,
-                    comp_dist * unit.nanometer,
-                    8033.28 * unit.kilojoules_per_mole / (unit.nanometer**2),
-                )
 
                 # Important, this makes pairs do not affect eachother with non bonded
                 # potentials
                 yu.addExclusion(i, i + 1)
                 ah.addExclusion(i, i + 1)
+
         else:
             # Counter to keep track of the total number of added particles.
             sm_cnt = n_parts_old
 
-            for i in range(n_drugs):
-                logger.debug("\nChain", i)
+            # print('sm_cnt: ', sm_cnt)
+            # print('n_drugs: ', n_drugs)
+            # quit()
 
+            for i in range(n_drugs):
+                # print("\nChain", i)
                 for j in range(sm_chain_length - 1):
-                    logger.debug(f"bond: {sm_cnt}-{sm_cnt+1}")
+                    # print(f"bond: {sm_cnt}-{sm_cnt+1}")
                     hb.addBond(
                         sm_cnt,
                         sm_cnt + 1,
@@ -420,6 +435,7 @@ def simulate(
     )
 
     if plat_cpu and not plat_gpu:
+        # Using the CPU for the calculations
         platform = openmm.Platform.getPlatformByName("CPU")
         platform_props = None
         logger.info("\nUsing CPU for the calculations.")
@@ -462,7 +478,7 @@ def simulate(
             dcd_save_interval = 50000
 
     elif time_units == "seconds":
-        if sim_time < 600:
+        if sim_time < 1000:
             log_report_interval = 10
             dcd_save_interval = 100
         else:
@@ -573,6 +589,14 @@ def simulate(
         )
     )
 
+    # Save positions before starting the simulation.
+    positions = simulation.context.getState(getPositions=True).getPositions()
+    app.PDBFile.writeFile(
+        simulation.topology,
+        positions,
+        open(f"{folder}minimized_system.pdb", "w"),
+    )
+
     logger.info(f"\nRunning simulation for {sim_time} {time_units}.")
     chk_reporter_flag = None
 
@@ -634,6 +658,7 @@ def simulate(
 
 if __name__ == "__main__":
     args = ut.arg_parse()
+    # print('args: ', args)
 
     # Custom logger for easier debugging, using the python logging module.
     logger, verbosity = ut.custom_logger(args)
@@ -661,21 +686,14 @@ if __name__ == "__main__":
 
     t0 = time.time()
 
-    simulate(
-        residues=residues,
-        name=args.name[0],
-        prot=proteins.loc[args.name[0]],
-        temp=args.temp[0],
-        sm_mol=args.small_molec,
-        sim_time=[args.time, args.nsteps],
-        verbosity=verbosity,
-        plat_cpu=args.cpu,
-        plat_gpu=args.gpu,
-        check_collision=args.check_collision,
-        lambd_override=args.lambd,
-        sigma_override=args.sigma,
-        mass_override=args.mass,
-    )
+    # Adding additional arguments to the argument parser.
+    vars(args)["proteins"] = proteins
+    vars(args)["residues"] = residues
+    vars(args)["logger"] = logger
+    vars(args)["verbosity"] = verbosity
+
+    # Running main simulation function
+    simulate(args)
 
     logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")
 
@@ -688,9 +706,10 @@ if __name__ == "__main__":
 
         notification_body = f"Total time: \n{time.time()-t0:.1f} s\n\nParameters:"
         for arg in vars(args):
-            notification_body += f"\n{arg}: {args.__dict__[arg]}".replace(
-                "[", ""
-            ).replace("]", "")
+            if arg != "residues" and arg != "proteins":
+                notification_body += f"\n{arg}: {args.__dict__[arg]}".replace(
+                    "[", ""
+                ).replace("]", "")
 
         ut.send_notif(
             title="Simulation Complete",
