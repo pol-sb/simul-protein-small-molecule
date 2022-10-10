@@ -1,6 +1,6 @@
 # Simulation of small molecules on IDP systems
 
-![Simulation example](./docs/slab_test12.png)
+![Simulation example](./docs/slab.png)
 
 ## Table of Contents
 
@@ -132,8 +132,8 @@ Substitute `<env-path>` with your desired python environment path or `/<env-path
 - `database`: Commands related to working with the IDP simulations database.
 - `tests`: Run several tests in order to check several IDP properties.
 
-
-Using this alias, here's an example of a command to run a simulation of 100 IDP chains at 310K adding 20mM coarse-grained GLY as the small molecule for 42000s using the GPUs 0 and 1:
+The main simulations are run using the `simulate` subcommand.
+Using the previous alias, here's an example of a command to run a simulation of 100 IDP chains at 310K adding 20mM of coarse-grained GLY as the small molecule for 42000s using the GPUs 0 and 1:
 
 ```bash
 idp_simul simulate --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200 --gpu 0 1
