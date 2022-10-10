@@ -1,6 +1,6 @@
 # Simulation of small molecules on IDP systems
 
-![Simulation example](./docs/slab_test12.png)
+![Simulation example](./docs/slab.png)
 
 ## Table of Contents
 
@@ -118,25 +118,32 @@ If the command is being run on a compute cluster, please make sure that it is la
 
 ## Usage <a name = "usage"></a>
 
-To run simulations, execute the `simulate.py` script with your python environment. An alias can be created in order to facilitate running the script from different directories:
+To use idp-simul, execute the `simulate.py` script with your python environment. An alias can be created in order to facilitate running the script from different directories:
 
 ```
 alias idp_simul="/<env-path>/bin/python3 /path/to/the/executable/simulate.py"
 ```
 Substitute `<env-path>` with your desired python environment path or `/<env-path>/bin/python3` with `python3` in order to use the main python distribution if OpenMM is installed there.
 
-Using this alias, here's an example of a command to run a simulation of 100 IDP chains at 310K adding 20mM coarse-grained GLY as the small molecule for 42000s using the GPUs 0 and 1:
+`idp-simul` has several subcommands that are used to select the operation mode of the program. Those are listed here:
+
+- `simulate` (or `sim`): This command allows to run IDP simulations including optional small molecules.
+- `check_version`: This command allows to check the program's version.
+- `database`: Commands related to working with the IDP simulations database.
+- `tests`: Run several tests in order to check several IDP properties.
+
+The main simulations are run using the `simulate` subcommand.
+Using the previous alias, here's an example of a command to run a simulation of 100 IDP chains at 310K adding 20mM of coarse-grained GLY as the small molecule for 42000s using the GPUs 0 and 1:
 
 ```bash
-idp_simul --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200 --gpu 0 1
+idp_simul simulate --name Q5-8_20 --temp 310 --small-molec GLY 20 0 --time 43200 --gpu 0 1
 ```
 
-Another  example command to run a Q5-8_20 simulation at 315K using a small molecule chain with 5 residues, while defining the interaction strength of each residue. The simulation will run for 43200 seconds and using the cpu:
+Another example command to run a Q5-8_20 simulation at 315K using a small molecule chain with 5 residues, while defining the interaction strength of each residue. The simulation will run for 43200 seconds and using the cpu:
 
 ```bash
-idp_simul --name Q5-8_20 --temp 315 --small_molec GLY-GLY-GLY-ARG-GLY 1 0.5 --lmb 0.350 0.900 0.1 0.1 0.1 --time 43200 --cc 10 --cpu
+idp_simul simulate --name Q5-8_20 --temp 315 --small_molec GLY-GLY-GLY-ARG-GLY 1 0.5 --lmb 0.350 0.900 0.1 0.1 0.1 --time 43200 --cc 10 --cpu
 ```
-
 
 As shown above, the script includes an argument parser which requires several arguments. This is the intended way to use this toolkit.
 
