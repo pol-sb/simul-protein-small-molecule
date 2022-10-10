@@ -29,19 +29,6 @@ def simulate(args):
     lambd_override = args.lambd
     sigma_override = args.sigma
     mass_override = args.mass
-    # print('sim_time: ', sim_time)
-    # print('sm_mol: ', sm_mol)
-    # print('temp: ', temp)
-    # print('prot: ', prot)
-    # print('name: ', name)
-    # print('verbosity: ', verbosity)
-    # print('plat_cpu: ', plat_cpu)
-    # print('plat_gpu: ', plat_gpu)
-    # print('check_collision: ', check_collision)
-    # print('lambd_override: ', lambd_override)
-    # print('sigma_override: ', sigma_override)
-    # print('mass_override: ', mass_override)
-    # quit()
 
     folder = name + f"/{temp}/"
 
