@@ -11,15 +11,22 @@ import pandas as pd
 import requests
 
 
-LOGO = (" _     _                 _                 _ \n"
-        "(_) __| |_ __        ___(_)_ __ ___  _   _| |\n"
-        "| |/ _` | '_ \ _____/ __| | '_ ` _ \| | | | |\n"
-        "| | (_| | |_) |_____\__ \ | | | | | | |_| | |\n"
-        "|_|\__,_| .__/      |___/_|_| |_| |_|\__,_|_|\n"
-        "        |_|                                  \n")
+LOGO = (
+    " _     _                 _                 _ \n"
+    "(_) __| |_ __        ___(_)_ __ ___  _   _| |\n"
+    "| |/ _` | '_ \ _____/ __| | '_ ` _ \| | | | |\n"
+    "| | (_| | |_) |_____\__ \ | | | | | | |_| | |\n"
+    "|_|\__,_| .__/      |___/_|_| |_| |_|\__,_|_|\n"
+    "        |_|                                  \n"
+)
+
 
 def check_version(path):
+    """This function checks the program's github repository for updates.
 
+    Args:
+        path (string): main path of the repository containing the program.
+    """
     # Saving original path
     orig_path = os.getcwd()
 
@@ -46,30 +53,44 @@ def check_version(path):
 
         if local_version == remote_version:
             print(f"Version {local_version}.")
-            print("\x1b[1;32;49m" + '[OK]' + '\x1b[0m' + " Current script version is up-to-date!")
+            print(
+                "\x1b[1;32;49m"
+                + "[OK]"
+                + "\x1b[0m"
+                + " Current script version is up-to-date!"
+            )
             sys.exit(69)
 
         else:
             print(f"Version {local_version}.")
-            print("\x1b[1;33;49m" + '[!]' + '\x1b[0m' + "Updates are available!")
+            print("\x1b[1;33;49m" + "[!]" + "\x1b[0m" + " Updates are available!")
 
     # If the update check fails this message is printed.
     except Exception:
         print(LOGO)
-        print('\x1b[2;31;49m' + "[!!!] Could not check version!" + '\x1b[0m')
+        print("\x1b[2;31;49m" + "[!!!] Could not check version!" + "\x1b[0m")
 
     # Returning to the original path.
     os.chdir(orig_path)
 
 
 def add_simulargs_to_subparser(subparser):
+    """This function adds simulation-related arguments to the subparser
+
+    Args:
+        subparser (argparse.ArgumentParser): 'simulation' subparser that will contain the simulation arguments.
+
+    Returns:
+        argparse.ArgumentParser: 'simulation' subparser containing simulation arguments.
+    """
     subp1 = subparser.add_parser(
         "simulate",
         aliases=["sim"],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         help="This command allows to run IDP simulations including optional small molecules.",
-        description=(LOGO+
-            "This command allows to run IDP simulations including optional small molecules.\n"
+        description=(
+            LOGO
+            + "This command allows to run IDP simulations including optional small molecules.\n"
             "See below for some usage examples."
         ),
         epilog=(
@@ -198,7 +219,6 @@ def add_simulargs_to_subparser(subparser):
         help="Send PB notification",
         action="store_true",
     )
-
 
     g2 = subp1.add_argument_group("Simulation time selection")
     g2_1 = g2.add_mutually_exclusive_group(required=True)
@@ -382,11 +402,9 @@ def custom_logger(args):
 
     # Format strings for the regular logger
     fmt_info = "%(message)s"
-    datefmt_info = "%d-%m-%Y %H:%M:%S"
 
     # Format strings for the error logger
     fmt_error = "\n%(asctime)s - \N{ESC}[31m%(levelname)s:\u001b[0m\n\t %(message)s"
-    datefmt_error = "%d-%m-%Y %H:%M:%S"
 
     # Attempting to create directories in which to save the topology
     create_dirs(args)
@@ -410,13 +428,13 @@ def custom_logger(args):
         fmt_string = fmt_debug
 
     elif args.quiet and not args.verbose:
-        verb = logging.ERROR
+        verb = logging.DEBUG
         logging.basicConfig(
             filename=logname,
             filemode="a",
             level=verb,
-            format=fmt_error,
-            datefmt=datefmt_error,
+            format=fmt_debug,
+            datefmt=datefmt_debug,
         )
 
         stdout_handler = logging.StreamHandler(sys.stdout)
@@ -443,12 +461,10 @@ def custom_logger(args):
 
         fmt_string = fmt_info
 
-    verbosity = [verb, fmt_string]
-
     # create logger
     logger = logging.getLogger("main simulation")
     logger.addHandler(stdout_handler)
-    verbosity = [verb, format_string]
+    verbosity = [verb, fmt_string]
 
     return logger, verbosity
 
