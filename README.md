@@ -169,6 +169,7 @@ The available arguments are:
 - Output options:
   - `-v` or `--verbose`: Increase output verbosity
   - `-q` or `--quiet`: Decrease output verbosity
+  - `--notif`: Allows to send a pushbullet notification using a pushbullet api key placed in a `.pbtoken` file in the root folder of the program.
 
 - Simulation time selection:
   - `--nsteps [NSTEPS]` or `--steps [NSTEPS]` or `-n [NSTEPS]`: Number of timesteps to run the simulation.
@@ -182,7 +183,13 @@ The available arguments are:
   - `--extend_thermostat TEMP NSTEPS` or `--ethermo TEMP NSTEPS` or `--et TEMP NSTEPS`: If present, after finishing the main dynamics, modify the thermostat temperature and run the simulation for a given number of steps.
   `extend_thermostat` takes two arguments: the first is the new temperature and the second is the number of steps to run the simulation.
 
+The `check_version` subcommand can be run like here: 
 
+```bash
+idp-simul check_version
+```
+
+in order to check for updates in the github repository.
 
 ## Results <a name = "results"></a>
 

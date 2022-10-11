@@ -134,7 +134,7 @@ def add_drugs(
     # Saving the Trajectory and Topology so it can be loaded later,
     # for example, if the calculation is stopped and then resumed.
     logger.debug(
-        f"\nSaving small molecule trajectories and topologies in:\n'{directory}'"
+        f"Saving small molecule trajectories and topologies in: '{directory}'"
     )
     traj.save_pdb(directory + "sm_drg_traj.pdb")
     top_df = top.to_dataframe()
@@ -197,7 +197,7 @@ class CGdrug:
 
         if enabled:
             logger.info(
-                "Small drug particles generated. Starting protein collision check...\n"
+                "Small drug particles generated. Starting protein collision check..."
             )
 
             dist_threshold = enabled[0]
@@ -229,9 +229,9 @@ class CGdrug:
                     changes += 1
 
             t2 = time.time()
-            logger.info(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
+            logger.info(f"Collision check done. Elapsed time: {t2-t1:.2f} s.")
         else:
-            logger.warning("Collision check disabled.\n")
+            logger.warning("Collision check disabled.")
 
     def _add_components(self, centers, n_comp, distance, dist_threshold, col_chk_flag):
 
