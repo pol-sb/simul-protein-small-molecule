@@ -132,15 +132,7 @@ def simulate(args):
     )
 
     # Attempting to create directories in which to save the topology
-    try:
-        os.mkdir(f"./{name}")
-    except FileExistsError:
-        pass
-
-    try:
-        os.mkdir(f"./{name}/{int(temp)}/")
-    except FileExistsError:
-        pass
+    ut.create_dirs(args)
 
     # Saving a .pdb file with the current configuration. This file has 100
     # protein strands spanning a long stretch of the z axis and completely
@@ -178,7 +170,7 @@ def simulate(args):
 
             drug_comp = smol_name.split("-")
 
-            logger.info("\nAdding small molecules to the system...")
+            logger.info("Adding small molecules to the system...")
             # My function to add small particles to the system
             in_traj, top, system, n_drugs, drg_param = smol.add_drugs(
                 system=system,
@@ -235,7 +227,7 @@ def simulate(args):
 
         # logger.info(system.getForces())
 
-    logger.info("\nSetting bonded and non-bonded interactions...")
+    logger.info("Setting bonded and non-bonded interactions...")
     # Adding a regular harmonic bond force
     hb = openmm.openmm.HarmonicBondForce()
 
@@ -425,14 +417,12 @@ def simulate(args):
         # Using the CPU for the calculations
         platform = openmm.Platform.getPlatformByName("CPU")
         platform_props = None
-        logger.info("\nUsing CPU for the calculations.")
+        logger.info("Using CPU for the calculations.")
         logger.info(f"This platform's speed score: {platform.getSpeed()}")
     else:
         # Uses CUDA as the platform for the GPU calculations.
         gpu_names = ut.get_gpus()
-        logger.info(
-            f"\nUsing CUDA for the calculations. GPU(s) available:\n{gpu_names}"
-        )
+        logger.info(f"Using CUDA for the calculations. GPU(s) available:\n{gpu_names}")
         if not plat_gpu:
             logger.info(f"\nNo GPU index given, using index 0 as fallback.")
             platform = openmm.Platform.getPlatformByName("CUDA")
@@ -519,7 +509,7 @@ def simulate(args):
             extension=args.extend_thermostat,
         )
 
-        logger.info("\nStarting simulation...\n")
+        logger.info("Starting simulation...")
         simulation.context.setPositions(pdb.positions)
 
         logger.info(
@@ -531,7 +521,7 @@ def simulate(args):
 
         simulation.minimizeEnergy()
 
-        logger.info("\nEnergy minimized.")
+        logger.info("Energy minimized.")
         logger.info(
             "Potential energy after minimization:"
             f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
@@ -584,7 +574,7 @@ def simulate(args):
         open(f"{folder}minimized_system.pdb", "w"),
     )
 
-    logger.info(f"\nRunning simulation for {sim_time} {time_units}.")
+    logger.info(f"Running simulation for {sim_time} {time_units}.")
     chk_reporter_flag = None
 
     # The checkpoint save time scales with the simulation length. The interval
@@ -644,65 +634,73 @@ def simulate(args):
 
 
 if __name__ == "__main__":
+    # Gathering args
     args = ut.arg_parse()
-    # print('args: ', args)
-
-    # Custom logger for easier debugging, using the python logging module.
-    logger, verbosity = ut.custom_logger(args)
 
     # Getting the main script path
     real_path = os.path.split(os.path.realpath(__file__))[0]
 
-    # Checking the current script version.
-    ut.check_version(real_path, logger)
+    # Using the 'simulate' subcommand
+    if args.subparser_name == "simulate":
 
-    residues = pd.read_csv(f"{real_path}/data/residues.csv").set_index(
-        "three", drop=False
-    )
+        # Custom logger for easier debugging, using the python logging module.
+        logger, verbosity = ut.custom_logger(args)
 
-    try:
-        proteins = pd.read_pickle(f"{real_path}/data/proteins.pkl")
-    except ValueError:
-        proteins = pd.read_csv(
-            f"{real_path}/data/proteins.csv", converters={"fasta": literal_eval}
-        )
-        prot_new = proteins.rename(columns={"Unnamed: 0": "Name"})
-        proteins = prot_new.set_index("Name")
-
-    logger.info(f"\nWorking with protein {args.name[0]} at {args.temp[0]} K.")
-
-    t0 = time.time()
-
-    # Adding additional arguments to the argument parser.
-    vars(args)["proteins"] = proteins
-    vars(args)["residues"] = residues
-    vars(args)["logger"] = logger
-    vars(args)["verbosity"] = verbosity
-
-    # Running main simulation function
-    simulate(args)
-
-    logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")
-
-    # Attempting to send a push notification to a pushbullet account to notify the
-    # end of the simulation. Needs a pushbullet API key which has to be stored in the file
-    # ./modules/.pbtoken
-    try:
-        with open(f"{real_path}/modules/.pbtoken", "r") as f:
-            pb_token = f.readline().strip()
-
-        notification_body = f"Total time: \n{time.time()-t0:.1f} s\n\nParameters:"
-        for arg in vars(args):
-            if arg != "residues" and arg != "proteins":
-                notification_body += f"\n{arg}: {args.__dict__[arg]}".replace(
-                    "[", ""
-                ).replace("]", "")
-
-        ut.send_notif(
-            title="Simulation Complete",
-            body=notification_body,
-            pb_token=pb_token,
+        residues = pd.read_csv(f"{real_path}/data/residues.csv").set_index(
+            "three", drop=False
         )
 
-    except FileNotFoundError:
-        logger.info("'.pbtoken' not found. Ommiting push notification.")
+        try:
+            proteins = pd.read_pickle(f"{real_path}/data/proteins.pkl")
+        except ValueError:
+            proteins = pd.read_csv(
+                f"{real_path}/data/proteins.csv", converters={"fasta": literal_eval}
+            )
+            prot_new = proteins.rename(columns={"Unnamed: 0": "Name"})
+            proteins = prot_new.set_index("Name")
+
+        logger.info(f"Working with protein {args.name[0]} at {args.temp[0]} K.")
+
+        t0 = time.time()
+
+        # Adding additional arguments to the argument parser.
+        vars(args)["proteins"] = proteins
+        vars(args)["residues"] = residues
+        vars(args)["logger"] = logger
+        vars(args)["verbosity"] = verbosity
+
+        # Running main simulation function
+        simulate(args)
+        logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")
+
+        # Attempting to send a push notification to a pushbullet account to notify the
+        # end of the simulation. Needs a pushbullet API key which has to be stored in the file
+        # ./modules/.pbtoken
+        if args.notif:
+            try:
+                with open(f"{real_path}/modules/.pbtoken", "r") as f:
+                    pb_token = f.readline().strip()
+
+                notification_body = (
+                    f"Total time: \n{time.time()-t0:.1f} s\n\nParameters:"
+                )
+                for arg in vars(args):
+                    if arg != "residues" and arg != "proteins":
+                        notification_body += f"\n{arg}: {args.__dict__[arg]}".replace(
+                            "[", ""
+                        ).replace("]", "")
+
+                ut.send_notif(
+                    title="Simulation Complete",
+                    body=notification_body,
+                    pb_token=pb_token,
+                )
+
+            except FileNotFoundError:
+                logger.info("'.pbtoken' not found. Ommiting push notification.")
+
+    # Using the 'check_version' subcommand.
+    elif args.subparser_name == "check_version":
+
+        # Checking the current script version.
+        ut.check_version(real_path)

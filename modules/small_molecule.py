@@ -9,13 +9,6 @@ import openmm.app as app
 import openmm.unit as unit
 import pandas as pd
 
-# TODO: Make it so that the added particles dont collide with the residues after
-# being placed.
-
-# TODO: Make the system bivalent
-
-# TODO: Use avogadro number for particle collocation!!
-
 # TODO: Add Charge
 
 logger = logging.getLogger("small molecule")
@@ -106,14 +99,17 @@ def add_drugs(
     if mass_override:
         for drg_ind, drg_typ in enumerate(drug_components):
             logger.info(
-                f"For {drg_typ} using non-default mass: {mass_override[drg_ind]}"
+                f"For {drg_typ}-{drg_ind} using non-default mass:"
+                f" {mass_override[drg_ind]}"
             )
             for part in range(num_part):
                 system.addParticle(mass_override[drg_ind] * unit.amu)
     else:
-        for drg_typ in drug_components:
+        for drg_ind, drg_typ in enumerate(drug_components):
             res_row = residues.loc[residues["three"] == f"{drg_typ}"]
-            logger.info(f"For {drg_typ} using default mass: {res_row['MW'][0]}")
+            logger.info(
+                f"For {drg_typ}-{drg_ind} using default mass: {res_row['MW'][0]}"
+            )
             for part in range(num_part):
                 system.addParticle(res_row["MW"][0] * unit.amu)
 
@@ -138,7 +134,7 @@ def add_drugs(
     # Saving the Trajectory and Topology so it can be loaded later,
     # for example, if the calculation is stopped and then resumed.
     logger.debug(
-        f"\nSaving small molecule trajectories and topologies in:\n'{directory}'"
+        f"Saving small molecule trajectories and topologies in: '{directory}'"
     )
     traj.save_pdb(directory + "sm_drg_traj.pdb")
     top_df = top.to_dataframe()
@@ -201,7 +197,7 @@ class CGdrug:
 
         if enabled:
             logger.info(
-                "Small drug particles generated. Starting protein collision check...\n"
+                "Small drug particles generated. Starting protein collision check..."
             )
 
             dist_threshold = enabled[0]
@@ -233,9 +229,9 @@ class CGdrug:
                     changes += 1
 
             t2 = time.time()
-            logger.info(f"\nCollision check done. Elapsed time: {t2-t1:.2f} s.")
+            logger.info(f"Collision check done. Elapsed time: {t2-t1:.2f} s.")
         else:
-            logger.warning("Collision check disabled.\n")
+            logger.warning("Collision check disabled.")
 
     def _add_components(self, centers, n_comp, distance, dist_threshold, col_chk_flag):
 
@@ -304,7 +300,7 @@ class CGdrug:
         # method of assignment.
         elif len(n_comp) > 2 and len(n_comp) % 2 != 0:
 
-            logger.debug(f"Detected {len(n_comp)} components: {n_comp}")
+            logger.debug(f"User defined small molecules have {len(n_comp)} components.")
             logger.debug(f"Distance between components: {distance}")
 
             self.description = {}
@@ -353,7 +349,8 @@ class CGdrug:
         # method of assignment.
         elif len(n_comp) > 2 and len(n_comp) % 2 == 0:
 
-            print("Detected", len(n_comp), "components.")
+            logger.debug(f"User defined small molecules have {len(n_comp)} components.")
+            logger.debug(f"Distance between components: {distance}")
 
             self.description = {}
             for ind, center in enumerate(centers):
@@ -412,6 +409,25 @@ class CGdrug:
                     chain.atom(i + cntr), chain.atom((i + 1) + cntr), order=1
                 )
                 cntr += 1
+        else:
+            logger.critical("[!] Topology not correctly implemented.")
+            cntr = 0
+
+            for drug_ind in range(self.n_drugs):
+                for drug_comp in range(len(self.n_components)):
+                    if cntr < (self.n_drugs*len(self.n_components))-1:
+
+                        self.top.add_bond(
+                            chain.atom((drug_ind * len(self.n_components)) + drug_comp),
+                            chain.atom(
+                                (drug_ind * len(self.n_components)) + (drug_comp + 1)
+                            ),
+                            order=1,
+                        )
+
+                        cntr += 1
+                    #  cntr = 0
+            # quit()
 
     def _create_trajectory(self):
 

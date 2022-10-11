@@ -2,7 +2,6 @@ import openmm
 import openmm.unit as unit
 from openmm import XmlSerializer, app
 
-import modules.small_molecule as smol
 import extensions as ext
 import utils as ut
 import mdtraj as md
@@ -16,7 +15,8 @@ xml_files = [fil for fil in os.listdir() if fil.endswith(".xml")]
 dcd_files = [fil for fil in os.listdir() if fil.endswith(".dcd")]
 
 params = ut.read_parameters()
-temp = params["TEMP"]
+temp = params["TEMP_(K)"]
+
 
 # Change this
 platform_str = "CPU"
