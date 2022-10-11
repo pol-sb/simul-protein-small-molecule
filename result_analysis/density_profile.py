@@ -7,10 +7,17 @@ import numpy as np
 
 import utils as ut
 
-ASP_RAT_MOD = 1.50
+ASP_RAT_MOD = 1.8
+0
 Z_LIM = 75
 EXTENT = 75
 EQUIL_TIME = 2000
+
+# plt.rc('text', usetex=True)
+plt.rc("font", family="serif")
+plt.rcParams.update({"font.size": 16})
+# plt.tick_params(labelsize=14)
+plt.rcParams["axes.linewidth"] = 0.5
 
 
 def get_trajectory(stride):
@@ -42,7 +49,6 @@ def create_histogram(z, dens, z_lim):
 
     print("\n  [*] Creating histogram", end="")
     for zi in z:
-        # print('zi: ', max(zi), min(zi))
         dens.append(np.histogram(zi, bins=np.arange(-z_lim, z_lim))[0])
     print(" - DONE")
     return dens
@@ -99,8 +105,8 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
             dens_avg_dat = np.array([range(dens[0].shape[0]), dens_avg])
             np.savetxt(dens_filename, dens_avg_dat.T)
 
-            plt.xlabel("z")
-            plt.ylabel("time")
+            plt.xlabel("z", fontsize=25)
+            plt.ylabel("Time", fontsize=25)
             plt.title(sim_name[0][:-11] + "_prot")
             plt.imshow(
                 dens,
@@ -187,13 +193,21 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
             dens_drg_avg_dat = np.array([range(dens_drg[0].shape[0]), dens_drg_avg])
             np.savetxt(dens_drg_filename, dens_drg_avg_dat.T)
 
-            fig, ax = plt.subplots(ncols=2)
+            # ax = plt.subplots(122)
+            # ax2 = plt.subplots(122)
+            # # fig2, ax2 = plt.subplots(2,1)
+            fig, (ax1, ax2), = plt.subplots(nrows=1, ncols=2)
 
-            plt_prot = ax[0]
-            plt_drg = ax[1]
+            plt_prot = ax1
+            plt_drg = ax2
 
-            plt_prot.set_xlabel("z")
-            plt_prot.set_ylabel("time")
+            # print(axd)
+            # quit()
+
+            plt_prot.set_xlabel("z", fontsize=25)
+            plt_prot.set_ylabel("Time", fontsize=25)
+            plt_prot.tick_params(axis='x', labelsize=20)
+            plt_prot.tick_params(axis='y', labelsize=20)
             plt_prot.set_title(sim_name[0][:-11] + "_prot")
             im1 = plt_prot.imshow(
                 dens,
@@ -204,8 +218,10 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
                 extent=[-EXTENT, EXTENT, dens_ext_bottom, 0],
             )
 
-            plt_drg.set_xlabel("z")
-            plt_drg.set_ylabel("time")
+            plt_drg.set_xlabel("z", fontsize=25)
+            plt_drg.set_ylabel("Time", fontsize=25)
+            plt_drg.tick_params(axis='x', labelsize=20)
+            plt_drg.tick_params(axis='y', labelsize=20)
             plt_drg.set_title(
                 sim_name[0][:-11] + "_drg\n" + r"$\lambda =$" + f"{lmbda_val}"
             )
@@ -216,9 +232,9 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
                 cmap="viridis",
                 extent=[-EXTENT, EXTENT, dens_ext_bottom, 0],
             )
-            fig.colorbar(im1, ax=plt_prot, shrink=0.5, pad=0.025)
-            fig.colorbar(im2, ax=plt_drg, shrink=0.5, pad=0.025)
-            fig.tight_layout(pad=1.5)
+            fig.colorbar(im1, ax=plt_prot, shrink=0.45, pad=0.135)
+            fig.colorbar(im2, ax=plt_drg, shrink=0.45, pad=0.135)
+            fig.tight_layout(pad=0.4, w_pad=0.2, h_pad=0.2)
             plt.ion()
             plt.show()
             plot_flag = input("\n  [?] Input 'ok' if the plot is ready: ").lower()
@@ -233,11 +249,15 @@ def prepare_profile(traj, sim_name, Z_LIM, EXTENT):
                         f"\n  [?] Please input the 'extent' value (previous {EXTENT}): "
                     )
                 )
-
-        plt.savefig(
-            f'{sim_name[0][:-11]}_lmbda-{lmbda_val.replace(".","")}_densprof.png',
-            dpi=400,
-        )
+            else:
+                plt.savefig(
+                    f'{sim_name[0][:-11]}_lmbda-{lmbda_val.replace(".","")}_densprof.png',
+                    dpi=1000,
+                )
+                plt.savefig(
+                    f'{sim_name[0][:-11]}_lmbda-{lmbda_val.replace(".","")}_densprof.svg',
+                    dpi=1000,
+                )
 
 
 if __name__ == "__main__":

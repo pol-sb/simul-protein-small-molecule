@@ -2,14 +2,23 @@ import argparse
 import logging
 import os
 import subprocess as sb
+import sys
 import time
+from locale import format_string
 
 import numpy as np
 import pandas as pd
 import requests
 
 
-def check_version(path, logger):
+LOGO = (" _     _                 _                 _ \n"
+        "(_) __| |_ __        ___(_)_ __ ___  _   _| |\n"
+        "| |/ _` | '_ \ _____/ __| | '_ ` _ \| | | | |\n"
+        "| | (_| | |_) |_____\__ \ | | | | | | |_| | |\n"
+        "|_|\__,_| .__/      |___/_|_| |_| |_|\__,_|_|\n"
+        "        |_|                                  \n")
+
+def check_version(path):
 
     # Saving original path
     orig_path = os.getcwd()
@@ -33,16 +42,21 @@ def check_version(path, logger):
             .strip()
         )
 
+        print(LOGO)
+
         if local_version == remote_version:
-            logger.info(
-                f"\nVersion {local_version}.\nCurrent script version is up-to-date!"
-            )
+            print(f"Version {local_version}.")
+            print("\x1b[1;32;49m" + '[OK]' + '\x1b[0m' + " Current script version is up-to-date!")
+            sys.exit(69)
+
         else:
-            logger.warning(f"\nVersion {local_version}.\n[!] Updates are available!")
+            print(f"Version {local_version}.")
+            print("\x1b[1;33;49m" + '[!]' + '\x1b[0m' + "Updates are available!")
 
     # If the update check fails this message is printed.
     except Exception:
-        logger.warning("Could not check version!")
+        print(LOGO)
+        print('\x1b[2;31;49m' + "[!!!] Could not check version!" + '\x1b[0m')
 
     # Returning to the original path.
     os.chdir(orig_path)
@@ -54,13 +68,7 @@ def add_simulargs_to_subparser(subparser):
         aliases=["sim"],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         help="This command allows to run IDP simulations including optional small molecules.",
-        description=(
-            " _     _                 _                 _ \n"
-            "(_) __| |_ __        ___(_)_ __ ___  _   _| |\n"
-            "| |/ _` | '_ \ _____/ __| | '_ ` _ \| | | | |\n"
-            "| | (_| | |_) |_____\__ \ | | | | | | |_| | |\n"
-            "|_|\__,_| .__/      |___/_|_| |_| |_|\__,_|_|\n"
-            "        |_|                                  \n\n"
+        description=(LOGO+
             "This command allows to run IDP simulations including optional small molecules.\n"
             "See below for some usage examples."
         ),
@@ -185,6 +193,13 @@ def add_simulargs_to_subparser(subparser):
         action="store_true",
     )
 
+    g4.add_argument(
+        "--notif",
+        help="Send PB notification",
+        action="store_true",
+    )
+
+
     g2 = subp1.add_argument_group("Simulation time selection")
     g2_1 = g2.add_mutually_exclusive_group(required=True)
 
@@ -271,7 +286,7 @@ def arg_parse():
         title="Operation Modes",
         description="Subcommands that are used to select the operation mode of the program.",
         required=True,
-        dest="subparser_name"
+        dest="subparser_name",
     )
 
     subp1 = add_simulargs_to_subparser(sim_par)
@@ -300,7 +315,7 @@ def arg_parse():
         title="Test types",
         description="Subcommands that are used to select which tests are run.",
         required=True,
-        dest="test_name"
+        dest="test_name",
     )
 
     subp_montecarlo = subp4_tests.add_parser(
@@ -338,40 +353,102 @@ def arg_parse():
     return args
 
 
+def create_dirs(args):
+    """Generate the folders required for a given type of simulation.
+
+    Args:
+        args (argparse.Namespace): argparse.Namespace containing all of the launch arguments for the program.
+    """
+
+    if args.subparser_name == "simulate":
+        try:
+            os.mkdir(f"./{args.name[0]}")
+        except FileExistsError:
+            pass
+
+        try:
+            os.mkdir(f"./{args.name[0]}/{int(args.temp[0])}/")
+        except FileExistsError:
+            pass
+
+
 def custom_logger(args):
-    # Format strings for the logger
-    fmt_str = "\n%(asctime)s - %(levelname)s:\n\t %(message)s"
-    datefmt = "[%d-%m-%Y %H:%M:%S]"
+    # fmt_str = "\n%(asctime)s - %(levelname)s:\n\t %(message)s"
+    logname = f"./{args.name[0]}/{int(args.temp[0])}/idp-simul_logger.out"
+
+    # Format strings for the debug logger
+    fmt_debug = "%(asctime)s | %(levelname)s | %(message)s"
+    datefmt_debug = "%d-%m-%Y %H:%M:%S"
+
+    # Format strings for the regular logger
+    fmt_info = "%(message)s"
+    datefmt_info = "%d-%m-%Y %H:%M:%S"
+
+    # Format strings for the error logger
+    fmt_error = "\n%(asctime)s - \N{ESC}[31m%(levelname)s:\u001b[0m\n\t %(message)s"
+    datefmt_error = "%d-%m-%Y %H:%M:%S"
+
+    # Attempting to create directories in which to save the topology
+    create_dirs(args)
 
     # Logger configuration
     if args.verbose and not args.quiet:
         verb = logging.DEBUG
         logging.basicConfig(
+            filename=logname,
+            filemode="a",
             level=verb,
-            format=fmt_str,
-            datefmt=datefmt,
-        )
-    elif args.quiet and not args.verbose:
-        fmt_str = "\n%(asctime)s - \N{ESC}[31m%(levelname)s:\u001b[0m\n\t %(message)s"
-        verb = logging.ERROR
-        logging.basicConfig(
-            level=verb,
-            format=fmt_str,
-            datefmt=datefmt,
-        )
-    else:
-        verb = logging.INFO
-        fmt_str = "%(message)s"
-        logging.basicConfig(
-            level=verb,
-            format=fmt_str,
-            datefmt=datefmt,
+            format=fmt_debug,
+            datefmt=datefmt_debug,
         )
 
-    verbosity = [verb, fmt_str]
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setLevel(logging.DEBUG)
+        out_fmt_debug = logging.Formatter(fmt_debug)
+        stdout_handler.setFormatter(out_fmt_debug)
+
+        fmt_string = fmt_debug
+
+    elif args.quiet and not args.verbose:
+        verb = logging.ERROR
+        logging.basicConfig(
+            filename=logname,
+            filemode="a",
+            level=verb,
+            format=fmt_error,
+            datefmt=datefmt_error,
+        )
+
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setLevel(logging.ERROR)
+        out_fmt_error = logging.Formatter(fmt_error)
+        stdout_handler.setFormatter(out_fmt_error)
+
+        fmt_string = fmt_error
+
+    else:
+        verb = logging.INFO
+        logging.basicConfig(
+            filename=logname,
+            filemode="a",
+            level=verb,
+            format=fmt_debug,
+            datefmt=datefmt_debug,
+        )
+
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setLevel(logging.DEBUG)
+        out_fmt_info = logging.Formatter(fmt_info)
+        stdout_handler.setFormatter(out_fmt_info)
+
+        fmt_string = fmt_info
+
+    verbosity = [verb, fmt_string]
+
     # create logger
     logger = logging.getLogger("main simulation")
-    verbosity = [verb, fmt_str]
+    logger.addHandler(stdout_handler)
+    verbosity = [verb, format_string]
 
     return logger, verbosity
 
