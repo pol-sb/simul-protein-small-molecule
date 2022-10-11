@@ -7,11 +7,9 @@ import numpy as np
 
 import utils as ut
 
-import traceback
-
 # plt.rc('text', usetex=True)
-# plt.rc('font', family='serif')
-plt.rcParams.update({"font.size": 14})
+plt.rc("font", family="serif")
+plt.rcParams.update({"font.size": 25})
 plt.rcParams["axes.linewidth"] = 0.6
 # plt.style.use('grayscale')
 
@@ -130,11 +128,12 @@ def plot_densities(
     temps: list,
     lambdas: list,
     color: str,
+    sigmas: list,
     conc_units: str,
 ):
 
     if drugs[0] == "NODRG":
-        for pr, T in itertools.product(proteins, temps):
+        for pr, T, conc in itertools.product(proteins, temps, conc):
             try:
                 print("\nsim_dict: ", sim_dict[pr]["NODRG"]["0"][str(T)]["None"])
                 f_path = sim_dict[pr]["NODRG"]["0"][str(T)]["None"]["path"]
@@ -153,7 +152,14 @@ def plot_densities(
                 print(pr, T, "skipped")
                 pass
 
-        plt.legend(framealpha=0, fontsize=19)
+        plt.legend(
+            loc="upper center",
+            framealpha=0,
+            fontsize=22,
+            ncol=2,
+            columnspacing=5.5,
+        )
+
         plt.xlabel("z", fontsize=25)
         plt.xticks(fontsize=25)
         plt.yticks(fontsize=25)
@@ -173,8 +179,13 @@ def plot_densities(
             .replace(" ", "_")
         )
         plt.tight_layout()
+
         plt.savefig(
             f"{proteins[0]}_NODRG_{temps_name}_plot.png", dpi=500, transparent=True
+        )
+
+        plt.savefig(
+            f"{proteins[0]}_NODRG_{temps_name}_plot.svg", dpi=500, transparent=True
         )
         plt.show()
 
@@ -184,7 +195,7 @@ def plot_densities(
         fig.set_size_inches(12, 6)
 
         pprint.pprint(sim_dict)
-        for pr, d, c, T, lam in itertools.product(
+        for pr, d, c, T, lam, sig in itertools.product(
             proteins, drugs, conc, temps, lambdas
         ):
             print("\ntrying:", pr, d, c, T, lam)
@@ -320,10 +331,7 @@ def plot_densities(
                     print(arr.shape)
 
                     ax1.plot(
-                        arr[:, 0],
-                        arr[:, 1],
-                        label=label,
-                        color=(c_R, c_G, c_B),
+                        arr[:, 0], arr[:, 1], label=label, color=(c_R, c_G, c_B), lw=3
                     )
 
                     if d != "NODRG":
@@ -341,6 +349,7 @@ def plot_densities(
                             arr_drg[:, 1],
                             label=label_drg,
                             color=(c_R, c_G, c_B),
+                            lw=3,
                         )
 
                 except KeyError:
@@ -365,14 +374,25 @@ def plot_densities(
                     # print(traceback.format_exc())
                     pass
 
-        ax1.legend(loc="upper right", fontsize=10.5, handlelength=1, labelspacing=0.7)
-        ax2.legend(
-            loc="center right", fontsize=10.5, ncol=1, handlelength=1, labelspacing=0.7
+        ax1.legend(
+            loc="upper right",
+            fontsize=12.5,
+            handlelength=1,
+            labelspacing=0.7,
         )
-        ax1.set_xlabel("z")
-        ax1.set_ylabel("Average Density")
-        ax2.set_xlabel("z")
-        ax2.set_ylabel("Average Density")
+        ax2.legend(
+            loc="center right", fontsize=12.5, ncol=1, handlelength=1, labelspacing=0.7
+        )
+        ax1.set_xlabel("z", fontsize=25)
+        ax1.set_ylabel("Average Density", fontsize=25)
+        ax2.set_xlabel("z", fontsize=25)
+        ax2.set_ylabel("Average Density", fontsize=25)
+
+        # ax1.set_xticks(fontsize=25)
+        # ax1.set_yticks(fontsize=25)
+
+        # ax2.set_xticks(fontsize=25)
+        # ax2.set_yticks(fontsize=25)
 
         plt.tight_layout()
 
@@ -393,8 +413,11 @@ def plot_densities(
             .replace("''", "NODRG")
         )
 
+        plt.tight_layout()
         plt.savefig(f"{proteins[0]}_{lambdas_name}_{temps_name}_plot.png", dpi=500)
+        plt.savefig(f"{proteins[0]}_{lambdas_name}_{temps_name}_plot.svg", dpi=500)
         plt.show()
+        # plt.gca().set_aspect('equal')
 
 
 if __name__ == "__main__":
@@ -407,20 +430,20 @@ if __name__ == "__main__":
             # "NODRG",
         ],
         temps=[
-            270,
-            290,
-            300,
-            310,
-            315,
-            320,
+            # 270,
+            # 290,
+            # 300,
+            # 310,
+            # 315,
+            # 320,
             323,
-            325,
-            330,
-            340,
-            350,
+            # 325,
+            # 330,
+            # 340,
+            # 350,
         ],
         lambdas=[
-            "",
+            # "",
             # "None",
             # -0.100,
             0,
@@ -430,14 +453,21 @@ if __name__ == "__main__":
             # 0.7,
             # 0.9,
         ],
+        sigmas=[
+            # "",
+            # "None",
+            0.45,
+            0.97,
+            2.099,
+        ],
         conc=[
-            0,
+            # 0,
             # 0.2,
             # 2,
-            10,
-            15,
+            # 10,
+            # 15,
             20,
         ],
-        color="ct",
+        color="lambda",
         conc_units="mM",
     )
