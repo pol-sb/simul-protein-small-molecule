@@ -723,13 +723,13 @@ if __name__ == "__main__":
     args = ut.arg_parse()
 
     # Getting the main script path
-    real_path = os.path.split(os.path.realpath(__file__))[0]
-
-    # Custom logger for easier debugging, using the python logging module.
-    logger, verbosity, folder_path = ut.custom_logger(args)
+    real_path = os.path.split(os.path.realpath(__file__))[0]  
 
     # Using the 'simulate' subcommand
     if args.subparser_name == "simulate":
+
+        # Custom logger for easier debugging, using the python logging module.
+        logger, verbosity, folder_path = ut.custom_logger(args)
 
         residues = pd.read_csv(f"{real_path}/data/residues.csv").set_index(
             "three", drop=False
@@ -769,6 +769,10 @@ if __name__ == "__main__":
     elif args.subparser_name == "tests":
 
         t0 = time.time()
+
+        # Custom logger for easier debugging, using the python logging module.
+        logger, verbosity, folder_path = ut.custom_logger(args)
+
         vars(args)["verbosity"] = verbosity
         tst.minimize_montecarlo(args, real_path, logger, folder_path)
 
