@@ -225,6 +225,9 @@ def add_simulargs_to_subparser(subparser):
 
     g2_1.add_argument(
         "--nsteps",
+        "--nstep",
+        "--tstep",
+        "--step",
         "--steps",
         "-n",
         nargs="?",
@@ -285,19 +288,202 @@ def add_simulargs_to_subparser(subparser):
     return subparser
 
 
+def add_simulargs_to_parser(parser):
+    """This function adds simulation-related arguments to the subparser
+
+    Args:
+        subparser (argparse.ArgumentParser): 'simulation' subparser that will contain the simulation arguments.
+
+    Returns:
+        argparse.ArgumentParser: 'simulation' subparser containing simulation arguments.
+    """
+
+    g1 = parser.add_argument_group(title="Simulation parameters")
+    g1.add_argument(
+        "--name",
+        "-N",
+        nargs=1,
+        type=str,
+        metavar="NAME",
+        help="Name of the protein sequence to be simulated.",
+        required=True,
+    )
+
+    g1.add_argument(
+        "--temp",
+        "-T",
+        nargs=1,
+        type=int,
+        metavar="TEMP",
+        help="Temperature (in K) of the system.",
+        required=True,
+    )
+
+    g3 = parser.add_argument_group("Small molecule parameters")
+
+    g3.add_argument(
+        "--small_molec",
+        "-s",
+        nargs=3,
+        default=None,
+        const=None,
+        type=str,
+        metavar=("RES", "CONC", "DISTANCE"),
+        help=(
+            "Residue Names (3 letter name, if more than one, joined by a hyphen),"
+            " concentration (in mM) and distance between particles (in A) of the small"
+            " molecules to be added. \nFor example: "
+            "--small_molec ARG-LYS-GLY-GLY-GLY 20 0.5"
+        ),
+    )
+
+    g3.add_argument(
+        "--lambd",
+        "--lam",
+        "--lmb",
+        nargs="+",
+        type=float,
+        help=(
+            "List of float lambda values to use for the small molecules, given "
+            "in the same order as the small molecules."
+            "\nFor example: --lmbd 0.350 0.900 0.1 0.6 0.1"
+        ),
+    )
+
+    g3.add_argument(
+        "--sigma",
+        "--sig",
+        nargs="+",
+        type=float,
+        help=(
+            "List of float sigma values to use for the small molecules, given "
+            "in the same order as the small molecules."
+        ),
+    )
+
+    g3.add_argument(
+        "--mass",
+        "-m",
+        nargs="+",
+        type=float,
+        help=(
+            "List of float molar mass values to use for the small molecules, given in"
+            " the same order as the small molecules."
+        ),
+    )
+
+    g3.add_argument(
+        "--check_collision",
+        "--cc",
+        type=float,
+        nargs=1,
+        metavar="DISTANCE",
+        help=(
+            "If present, enables collision check after adding the small"
+            " molecules into the system. Omit this option to disable the check."
+            "Takes a distance value (in A) between the small molecules and the protein"
+            " to check for collision."
+        ),
+    )
+
+    g4 = parser.add_argument_group("Output options")
+
+    g4.add_argument(
+        "-v",
+        "--verbose",
+        help="Increase output verbosity",
+        action="store_true",
+    )
+
+    g4.add_argument(
+        "-q",
+        "--quiet",
+        help="Decrease output verbosity",
+        action="store_true",
+    )
+
+    g4.add_argument(
+        "--notif",
+        help="Send PB notification",
+        action="store_true",
+    )
+
+    g2 = parser.add_argument_group("Simulation time selection")
+    g2_1 = g2.add_mutually_exclusive_group(required=True)
+
+    g2_1.add_argument(
+        "--nsteps",
+        "--nstep",
+        "--tstep",
+        "--step",
+        "--steps",
+        "-n",
+        nargs="?",
+        metavar="NSTEPS",
+        const=0,
+        type=int,
+        help="Number of timesteps to run the simulation.",
+    )
+
+    g2_1.add_argument(
+        "--time",
+        "--tsec",
+        "-t",
+        nargs="?",
+        metavar="NSECONDS",
+        const=0,
+        type=int,
+        help="Number of seconds to run the simulation.",
+    )
+
+    g_sim = parser.add_argument_group("Simulation configuration")
+    g_sim_2 = g_sim.add_mutually_exclusive_group(required=True)
+
+    g_sim_2.add_argument(
+        "--cpu",
+        help="Use the CPU as platform for the openmm.simulation.",
+        action="store_true",
+    )
+    g_sim_2.add_argument(
+        "--gpu",
+        nargs="+",
+        metavar="GPUID",
+        type=int,
+        help=(
+            "Use the GPU as platform for the openmm.simulation. "
+            "Several GPUs can be used at once by passing their indexes separated by a space."
+        ),
+    )
+
+    ex_sim = parser.add_argument_group("Simulation post-treatment")
+
+    ex_sim.add_argument(
+        "--extend_thermostat",
+        "--ethermo",
+        "--et",
+        type=float,
+        metavar=("TEMP", "NSTEPS"),
+        nargs=2,
+        help=(
+            "If present, after finishing the main dynamics, modify the thermostat"
+            " temperature and run the simulation for a given number of steps. "
+            "--extend_thermostat takes two arguments: the first is the new "
+            "temperature and the second is the number of steps to run the "
+            "simulation."
+        ),
+    )
+
+    return parser
+
+
 def arg_parse():
     parser = argparse.ArgumentParser(
         prog="idp-simul",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=(
-            " _     _                 _                 _ \n"
-            "(_) __| |_ __        ___(_)_ __ ___  _   _| |\n"
-            "| |/ _` | '_ \ _____/ __| | '_ ` _ \| | | | |\n"
-            "| | (_| | |_) |_____\__ \ | | | | | | |_| | |\n"
-            "|_|\__,_| .__/      |___/_|_| |_| |_|\__,_|_|\n"
-            "        |_|                                  \n\n"
-            "OpenMM script to run intrinsically disordered protein (IDP) molecular"
-            " dynamics simulations with the capability of including user-defined "
+            LOGO
+            + "\nOpenMM script to run intrinsically disordered protein (IDP) molecular\n"
+            "dynamics simulations with the capability of including user-defined\n"
             "small molecules in the system."
         ),
     )
@@ -347,24 +533,17 @@ def arg_parse():
         " small molecules and accept the trajectory if the energy is reduced.",
     )
 
+    subp5 = add_simulargs_to_parser(subp_montecarlo)
+
     g0 = subp_montecarlo.add_argument_group(title="Minimization parameters")
     g0.add_argument(
         "--runs",
-        "-N",
-        nargs=1,
-        type=str,
-        metavar="NAME",
-        help="Name of the protein sequence to be simulated.",
-        required=True,
-    )
-
-    g0.add_argument(
-        "--temp",
-        "-T",
+        "--mcrun",
+        "--ntimes",
         nargs=1,
         type=int,
-        metavar="TEMP",
-        help="Temperature (in K) of the system.",
+        metavar="NAME",
+        help="Number of minimization runs to be performed.",
         required=True,
     )
 
@@ -380,21 +559,38 @@ def create_dirs(args):
         args (argparse.Namespace): argparse.Namespace containing all of the launch arguments for the program.
     """
 
-    if args.subparser_name == "simulate":
-        try:
-            os.mkdir(f"./{args.name[0]}")
-        except FileExistsError:
-            pass
+    folder_date = time.strftime("%Y%m%d_%H%M%S")
 
-        try:
-            os.mkdir(f"./{args.name[0]}/{int(args.temp[0])}/")
-        except FileExistsError:
-            pass
+    if args.subparser_name == "simulate":
+        prefix = ""
+    elif args.subparser_name == "tests":
+        if args.test_name == "montecarlo":
+            prefix = "mc_minimize_"
+        else:
+            prefix = "test_"
+
+    try:
+        folder_path = f"./{prefix}{args.name[0]}_{folder_date}"
+        os.mkdir(folder_path)
+    except FileExistsError:
+        pass
+
+    try:
+        folder_path = f"./{prefix}{args.name[0]}_{folder_date}/{int(args.temp[0])}"
+        os.mkdir(folder_path)
+    except FileExistsError:
+        pass
+
+    return folder_path, prefix
 
 
 def custom_logger(args):
+    # Attempting to create directories in which to save the topology
+    folder_path, prefix = create_dirs(args)
+
     # fmt_str = "\n%(asctime)s - %(levelname)s:\n\t %(message)s"
-    logname = f"./{args.name[0]}/{int(args.temp[0])}/idp-simul_logger.out"
+    # logname = f"./{args.name[0]}/{int(args.temp[0])}/idp-simul_logger.out"
+    logname = f"{folder_path}/idp-simul_logger.out"
 
     # Format strings for the debug logger
     fmt_debug = "%(asctime)s | %(levelname)s | %(message)s"
@@ -405,9 +601,6 @@ def custom_logger(args):
 
     # Format strings for the error logger
     fmt_error = "\n%(asctime)s - \N{ESC}[31m%(levelname)s:\u001b[0m\n\t %(message)s"
-
-    # Attempting to create directories in which to save the topology
-    create_dirs(args)
 
     # Logger configuration
     if args.verbose and not args.quiet:
@@ -466,7 +659,7 @@ def custom_logger(args):
     logger.addHandler(stdout_handler)
     verbosity = [verb, fmt_string]
 
-    return logger, verbosity
+    return logger, verbosity, folder_path
 
 
 def read_parameters(path=""):
@@ -614,6 +807,17 @@ def send_notif(title, body, pb_token):
     headers = {f"Access-Token": pb_token, "Content-Type": "application/json"}
     data = {"type": "note", "title": title, "body": body}
     req = requests.post(url, auth=(pb_token, ""), data=data)
+
+
+def timesteps_to_ns(timesteps):
+
+    # timestep to picosecond
+    tstep_res = timesteps * 0.005
+
+    # timestep to nanosecond
+    tstep_res /= 1000
+
+    return tstep_res
 
 
 def get_gpus():

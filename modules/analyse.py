@@ -111,8 +111,10 @@ def genParamsLJ(df, name, prot):
 
     # I added a [0] in here.
     fasta = prot.fasta.copy()
-
+    
     r = df.copy()
+    r.loc["X"] = r.loc[fasta[0]]
+    
     # print('r: ', r)
     r.loc["X"] = r.loc[fasta[0]]
     r.loc["Z"] = r.loc[fasta[-1]]

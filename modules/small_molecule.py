@@ -136,12 +136,12 @@ def add_drugs(
     logger.debug(
         f"Saving small molecule trajectories and topologies in: '{directory}'"
     )
-    traj.save_pdb(directory + "sm_drg_traj.pdb")
+    traj.save_pdb(directory + "/sm_drg_traj.pdb")
     top_df = top.to_dataframe()
     top_ats = top_df[0]
     top_bnd = top_df[1]
-    top_ats.to_csv(directory + "sm_drg_ats.csv")
-    np.save(directory + "sm_drg_bnd.npy", top_bnd)
+    top_ats.to_csv(directory + "/sm_drg_ats.csv")
+    np.save(directory + "/sm_drg_bnd.npy", top_bnd)
 
     return traj, top, system, num_part, drg_param
 
