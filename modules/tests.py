@@ -10,6 +10,7 @@ from openmm import XmlSerializer, app
 import modules.small_molecule as smol
 import modules.utils as ut
 from modules.analyse import *
+import matplotlib.pyplot as plt
 
 
 def minimize_montecarlo(args, real_path, logger, folder):
@@ -66,7 +67,7 @@ def minimize_montecarlo(args, real_path, logger, folder):
     residues = residues.set_index("one")
 
     # folder = "test_mc_minimize_" + name + f"/{temp}/"
-    
+
     # Generates the parameters for the LJ interaction º
     lj_eps, fasta, types, MWs = genParamsLJ(residues, name, prot)
 
@@ -115,7 +116,7 @@ def minimize_montecarlo(args, real_path, logger, folder):
         comp_dist = float(sm_mol[2])
 
         drug_comp = smol_name.split("-")
-        
+
         print("")
         logger.info("Adding small molecules to the system...")
 
@@ -255,7 +256,7 @@ def minimize_montecarlo(args, real_path, logger, folder):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 folder + f"/{name}_{temp}_{sm_mol[0]}_report.dcd",
-                dcd_save_interval,
+                sim_time,
             )
         )
 
@@ -263,7 +264,7 @@ def minimize_montecarlo(args, real_path, logger, folder):
         simulation.reporters.append(
             app.dcdreporter.DCDReporter(
                 folder + f"/{name}_{temp}_NODRG_report.dcd",
-                dcd_save_interval,
+                sim_time,
             )
         )
 
@@ -293,17 +294,17 @@ def minimize_montecarlo(args, real_path, logger, folder):
 
     sim_time_ns = ut.timesteps_to_ns(sim_time)
 
-    simulation.saveCheckpoint(f"{folder}/res_minimization_checkpoint.chk")
-
+    simulation.saveState(f"{folder}/res_minimization_state.xml")
     energy_list = []
+
+    in_pot_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
 
     for run_ind in range(n_mc_runs[0]):
 
+        energy_list.append(in_pot_energ._value)
+
         print("")
         logger.info(f"MC minimization step: {run_ind}")
-
-        in_pot_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
-        
 
         logger.info(
             f"Running simulation for {sim_time} {time_units} ({sim_time_ns} ns)."
@@ -314,22 +315,29 @@ def minimize_montecarlo(args, real_path, logger, folder):
 
         run_pot_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
 
-
-        energy_list.append(run_pot_energ._value)
-
         if run_pot_energ < in_pot_energ:
-            logger.info("Run minimized energy.")
-            logger.info(f'Energy difference: {in_pot_energ-run_pot_energ}')
-            simulation.saveCheckpoint(f"{folder}/res_minimization_checkpoint.chk")
+            logger.info("[!] Run minimized energy.")
+            logger.info(f"Energy difference: {run_pot_energ-in_pot_energ}")
+            in_pot_energ = run_pot_energ
+            logger.info(f"Current energy: {in_pot_energ}")
+            simulation.saveState(f"{folder}/res_minimization_state.xml")
+
         else:
-            logger.info("Energy unchanged.")
-            simulation.loadCheckpoint(f"{folder}/res_minimization_checkpoint.chk")
+            logger.info(f"Energy unchanged.")
+            logger.info(f"Current energy: {in_pot_energ}")
+            logger.info(f"Run energy: {run_pot_energ}")
+            simulation.loadState(f"{folder}/res_minimization_state.xml")
 
     print("")
-    logger.info(f"MC minimization done.")
+
+    energ_array = np.array([range(n_mc_runs[0]), energy_list]).T
     logger.info(f"Energies stored in '{folder}/res_minimization_energies.log'.")
-    np.savetxt(f"{folder}/res_minimization_energies.log", np.array([range(n_mc_runs[0]), energy_list]).T)
-    
+    np.savetxt(
+        f"{folder}/res_minimization_energies.log",
+        energ_array,
+        
+    )
+
     # Saving final system position.
     positions = simulation.context.getState(getPositions=True).getPositions()
     app.PDBFile.writeFile(
@@ -337,3 +345,9 @@ def minimize_montecarlo(args, real_path, logger, folder):
         positions,
         open(f"{folder}/res_finalsystem.pdb", "w"),
     )
+
+    # Plotting energy variation
+    plt.plot(energ_array[1:, 0], energ_array[1:, 1])
+    plt.xlabel("Iteration")
+    plt.ylabel("Potential Energy (kJ/mol)")
+    plt.savefig(f"{folder}/res_energ_plot.png", dpi=200)
