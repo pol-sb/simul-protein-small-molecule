@@ -94,6 +94,29 @@ def minimize_montecarlo(args, real_path, logger, folder):
     # Attempting to create directories in which to save the topology
     ut.create_dirs(args)
 
+    if args.resume:
+
+        logger.info(f"Attempting to resume a simulation...")
+        print("")
+
+        # Checking if there is a checkpoint file
+        chk_path, chk_file = ut.find_checkpoint()
+
+        if chk_path != "":
+            logger.info(f"Checkpoint file found in '{chk_path}.'")
+
+        # print('check_point: ', check_point)
+        check_point = chk_path + "/" + chk_file
+        
+
+        # check_point = chk_path + f"/{name}_{temp}_{sm_mol[0]}_restart.chk"
+        # except TypeError:
+        # check_point = chk_path + f"/{name}_{temp}_NODRG_restart.chk"
+    else:
+        logger.info(f"Starting new simulation...")
+        print("")
+        check_point = ''
+
     # Saving a .pdb file with the current configuration.
     logger.info(f"Storing files in {folder}")
     in_traj.save_pdb(f"{folder}/top.pdb")
@@ -109,43 +132,77 @@ def minimize_montecarlo(args, real_path, logger, folder):
     logger.debug(top)
     n_parts_old = system.getNumParticles()
 
-    if sm_mol:
+    if not os.path.isfile(check_point) and not args.resume:
+        # This block of code will be executed if
+        # there is not a checkpoint file
 
-        smol_name = sm_mol[0]
-        smol_conc = float(sm_mol[1])
-        comp_dist = float(sm_mol[2])
+        if sm_mol:
+            smol_name = sm_mol[0]
+            smol_conc = float(sm_mol[1])
+            comp_dist = float(sm_mol[2])
 
-        drug_comp = smol_name.split("-")
+            drug_comp = smol_name.split("-")
 
-        print("")
-        logger.info("Adding small molecules to the system...")
+            print("")
+            logger.info("Adding small molecules to the system...")
 
-        # Adding small particles to the system
-        in_traj, top, system, n_drugs, drg_param = smol.add_drugs(
-            system=system,
-            in_traj=in_traj,
-            in_top=top,
-            conc=smol_conc,
-            dist_threshold=2,
-            drug_components=drug_comp,
-            directory=folder,
-            comp_dist=comp_dist,
-            verbosity=verbosity,
-            residues=residues,
-            col_chk_flag=check_collision,
-            lambd_override=lambd_override,
-            mass_override=mass_override,
-            sigma_override=sigma_override,
-        )
+            # Adding small particles to the system
+            in_traj, top, system, n_drugs, drg_param = smol.add_drugs(
+                system=system,
+                in_traj=in_traj,
+                in_top=top,
+                conc=smol_conc,
+                dist_threshold=2,
+                drug_components=drug_comp,
+                directory=folder,
+                comp_dist=comp_dist,
+                verbosity=verbosity,
+                residues=residues,
+                col_chk_flag=check_collision,
+                lambd_override=lambd_override,
+                mass_override=mass_override,
+                sigma_override=sigma_override,
+            )
 
-        pdb = app.pdbfile.PDBFile(folder + "/sm_drg_traj.pdb")
-        logger.debug(f"Number of particles: {system.getNumParticles()}")
-        logger.debug(f"Number of drugs: {n_drugs}")
+            pdb = app.pdbfile.PDBFile(folder + "/sm_drg_traj.pdb")
+            logger.debug(f"Number of particles: {system.getNumParticles()}")
+            logger.debug(f"Number of drugs: {n_drugs}")
+
+        else:
+            logger.info("No small molecule given. Proceeding with only protein.")
+            drg_param = "None"
+            sigma = "None"
 
     else:
-        logger.info("No small molecule given. Proceeding with only protein.")
-        drg_param = "None"
-        sigma = "None"
+        # This code will get executed if there is a checkpoint file and
+        # will load the previously used small molecule parameters and
+        # configuration
+
+        logger.info("\nReading small molecules from stored files...")
+        top_ats = pd.read_csv(chk_path + "/sm_drg_ats.csv")
+
+        # TODO: Add a way of getting the comp_dist used in a simulation
+        # when resuming
+
+        # This was before: n_drugs = (len(top_ats) - n_parts_old) // 2
+        n_drugs = len(top_ats) - n_parts_old
+        logger.info(f"number of drugs: {n_drugs}")
+
+        top_bnd = np.load(chk_path + "/sm_drg_bnd.npy")
+        top = md.Topology.from_dataframe(top_ats, top_bnd)
+
+        in_traj = md.load(chk_path + "/final_system_state.pdb")
+
+        pdb = app.pdbfile.PDBFile(chk_path + "/sm_drg_traj.pdb")
+        top = pdb.getTopology()
+
+        # logger.info(f"in_traj top: {in_traj.topology}")
+
+        xml_path = [f for f in os.listdir(chk_path) if f.endswith(".xml")][0]
+
+        with open(chk_path + "/" + xml_path, "r") as f:
+            system_ser = f.read()
+            system = XmlSerializer.deserialize(system_ser)
 
     # This block sets up particle interactions.
     logger.info("Setting bonded and non-bonded interactions...")
@@ -160,45 +217,55 @@ def minimize_montecarlo(args, real_path, logger, folder):
     # chains.
     sim.set_AA_params(hb, ah, yu, n_chains, yukawa_eps, prot, N, residues)
 
-    # Adding the small drug particles to the CustomNonbondedForce used in the system.
-    # n_drugs (number of small molecules) by 2 (bimolecular).
-    if sm_mol:
-        lambdas, sigma = sim.add_small_molec(
-            sm_mol,
-            residues,
-            logger,
-            lambd_override,
-            sigma_override,
-            n_drugs,
-            yu,
-            ah,
-            hb,
-            n_parts_old,
-            comp_dist,
-        )
+    if not os.path.isfile(check_point) and not args.resume:
+        # Adding the small drug particles to the CustomNonbondedForce used in the system.
+        # n_drugs (number of small molecules) by 2 (bimolecular).
+        if sm_mol:
+            lambdas, sigma = sim.add_small_molec(
+                sm_mol,
+                residues,
+                logger,
+                lambd_override,
+                sigma_override,
+                n_drugs,
+                yu,
+                ah,
+                hb,
+                n_parts_old,
+                comp_dist,
+            )
 
-    logger.debug(f"ah:, {ah.getNumParticles()}")
-    logger.debug(f"yu:, {yu.getNumParticles()}")
+        logger.debug(f"ah:, {ah.getNumParticles()}")
+        logger.debug(f"yu:, {yu.getNumParticles()}")
 
-    yu.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
-    ah.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
-    hb.setUsesPeriodicBoundaryConditions(True)
+        yu.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
+        ah.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
+        hb.setUsesPeriodicBoundaryConditions(True)
 
-    system.addForce(hb)
-    system.addForce(yu)
-    system.addForce(ah)
+    # Generating system if a checkpoint file is not found.
+    if not os.path.isfile(check_point) and not args.resume:
+        system.addForce(hb)
+        system.addForce(yu)
+        system.addForce(ah)
 
-    serialized_system = XmlSerializer.serialize(system)
+        serialized_system = XmlSerializer.serialize(system)
 
-    try:
-        outfile = open(f"./{folder}/{name}_{temp}_{sm_mol[0]}_system.xml", "w")
-    except TypeError:
-        outfile = open(f"./{folder}/{name}_{temp}_NODRG_system.xml", "w")
+        try:
+            outfile = open(f"./{folder}/{name}_{temp}_{sm_mol[0]}_system.xml", "w")
+        except TypeError:
+            outfile = open(f"./{folder}/{name}_{temp}_NODRG_system.xml", "w")
 
-    print("")
-    logger.info("Generating '.xml' system file...")
-    outfile.write(serialized_system)
-    outfile.close()
+        print("")
+        logger.info("Generating '.xml' system file...")
+        outfile.write(serialized_system)
+        outfile.close()
+
+    # Skippng system generation if a checkpoint file is found.
+    else:
+        logger.info("\nCheckpoint file found, skipping system generation.")
+        logger.debug(f"System num parts: {system.getNumParticles()}\n")
+
+        logger.debug(pdb.topology)
 
     integrator = openmm.openmm.LangevinIntegrator(
         temp * unit.kelvin, 0.01 / unit.picosecond, 0.005 * unit.picosecond
@@ -220,58 +287,91 @@ def minimize_montecarlo(args, real_path, logger, folder):
         platformProperties=platform_props,
     )
 
-    # Saving simulation parameters into a 'parameter.dat' file to facilitate
-    # data analysis and results parsing later
-    ut.write_params(
-        path=f"./{folder}/parameters.dat",
-        name=name,
-        temp=temp,
-        sm_mol=sm_mol,
-        drg_param=drg_param,
-        sim_time=sim_time,
-        time_units=time_units,
-        sigma=sigma,
-        mass=mass_override,
-        extension=args.extend_thermostat,
-    )
+    if os.path.isfile(check_point) and args.resume:
+        logger.info("\nResuming simulation from checkpoint file...")
+        simulation.loadCheckpoint(check_point)
+        logger.info("Checkpoint loaded!")
 
-    print("")
-    logger.info("Starting simulation...")
-    simulation.context.setPositions(pdb.positions)
-
-    logger.info(
-        "Initial potential energy:"
-        f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
-    )
-
-    simulation.minimizeEnergy()
-
-    logger.info("Energy minimized.")
-    logger.info(
-        "Potential energy after minimization:"
-        f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
-    )
-
-    try:
-        simulation.reporters.append(
-            app.dcdreporter.DCDReporter(
-                folder + f"/{name}_{temp}_{sm_mol[0]}_report.dcd",
-                sim_time,
+    if os.path.isfile(check_point) and args.resume:
+        try:
+            simulation.reporters.append(
+                app.dcdreporter.DCDReporter(
+                    f"{folder}/{name}_{temp}_{sm_mol[0]}_report_continue.dcd",
+                    dcd_save_interval,
+                    append=False,
+                )
             )
+        except TypeError:
+            simulation.reporters.append(
+                app.dcdreporter.DCDReporter(
+                    f"{folder}/{name}_{temp}_NODRG_report_continue.dcd",
+                    dcd_save_interval,
+                )
+            )
+    else:
+        # Saving simulation parameters into a 'parameter.dat' file to facilitate
+        # data analysis and results parsing later
+        ut.write_params(
+            path=f"./{folder}/parameters.dat",
+            name=name,
+            temp=temp,
+            sm_mol=sm_mol,
+            drg_param=drg_param,
+            sim_time=sim_time,
+            time_units=time_units,
+            sigma=sigma,
+            mass=mass_override,
+            extension=args.extend_thermostat,
         )
 
-    except TypeError:
-        simulation.reporters.append(
-            app.dcdreporter.DCDReporter(
-                folder + f"/{name}_{temp}_NODRG_report.dcd",
-                sim_time,
-            )
+        print("")
+        logger.info("Starting simulation...")
+        simulation.context.setPositions(pdb.positions)
+
+        logger.info(
+            "Initial potential energy:"
+            f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
         )
+
+        if not os.path.isfile(check_point) and not args.resume:
+            # Initial minimization of the system
+            simulation.minimizeEnergy()
+
+            logger.info("Energy minimized.")
+            logger.info(
+                "Potential energy after minimization:"
+                f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
+            )
+
+        try:
+            simulation.reporters.append(
+                app.dcdreporter.DCDReporter(
+                    folder + f"/{name}_{temp}_{sm_mol[0]}_report.dcd",
+                    sim_time,
+                )
+            )
+
+        except TypeError:
+            simulation.reporters.append(
+                app.dcdreporter.DCDReporter(
+                    folder + f"/{name}_{temp}_NODRG_report.dcd",
+                    sim_time,
+                )
+            )
+
+    # Checks if there is an existing .log file in order to select the .log file
+    # writing mode
+    if os.path.isfile(check_point):
+        append_mode = True
+        log_name = f"{folder}/{name}_{temp}_continue.log"
+    else:
+        log_name = f"{folder}/{name}_{temp}.log"
+        append_mode = False
 
     # Generates log file with information
     simulation.reporters.append(
         app.statedatareporter.StateDataReporter(
-            f"{folder}/{name}_{temp}.log",
+            log_name,
             reportInterval=log_report_interval,
             potentialEnergy=True,
             temperature=True,
@@ -280,7 +380,7 @@ def minimize_montecarlo(args, real_path, logger, folder):
             volume=True,
             elapsedTime=True,
             separator="\t",
-            append=False,
+            append=append_mode,
         )
     )
 
@@ -335,7 +435,6 @@ def minimize_montecarlo(args, real_path, logger, folder):
     np.savetxt(
         f"{folder}/res_minimization_energies.log",
         energ_array,
-        
     )
 
     # Saving final system position.

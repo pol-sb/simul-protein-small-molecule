@@ -4,7 +4,6 @@ import os
 import subprocess as sb
 import sys
 import time
-from locale import format_string
 
 import numpy as np
 import pandas as pd
@@ -74,6 +73,24 @@ def check_version(path):
     os.chdir(orig_path)
 
 
+def find_checkpoint():
+
+    chk_path = ""
+    chk_file = ""
+
+    for root, dirs, files in os.walk("."):
+        chk_file = [f for f in files if f.endswith("restart.chk")]
+        if len(chk_file) > 0:
+            chk_path = root
+            chk_file = chk_file[0]
+            break
+
+    # print("chk_path: ", chk_path)
+    # print("chk_file: ", chk_file)
+    # quit()
+    return chk_path, chk_file
+
+
 def add_simulargs_to_subparser(subparser):
     """This function adds simulation-related arguments to the subparser
 
@@ -110,6 +127,7 @@ def add_simulargs_to_subparser(subparser):
             "When a simulation is started, a folder named after the protein name will be created"
         ),
     )
+
     g1 = subp1.add_argument_group(title="Simulation parameters")
     g1.add_argument(
         "--name",
@@ -129,6 +147,13 @@ def add_simulargs_to_subparser(subparser):
         metavar="TEMP",
         help="Temperature (in K) of the system.",
         required=True,
+    )
+
+    g1.add_argument(
+        "--resume",
+        "--continue" "--res",
+        action="store_true",
+        help="If this argument is passed, the program will attempt to resume a simulation.",
     )
 
     g3 = subp1.add_argument_group("Small molecule parameters")
@@ -317,6 +342,14 @@ def add_simulargs_to_parser(parser):
         metavar="TEMP",
         help="Temperature (in K) of the system.",
         required=True,
+    )
+
+    g1.add_argument(
+        "--resume",
+        "--continue",
+        "--res",
+        action="store_true",
+        help="If this argument is passed, the program will attempt to resume a simulation.",
     )
 
     g3 = parser.add_argument_group("Small molecule parameters")

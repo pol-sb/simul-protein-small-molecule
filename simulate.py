@@ -397,9 +397,13 @@ def simulate(args):
     # or be given as a parameter in the argument parser.
 
     if not os.path.isfile(check_point):
+        # This block of code will be executed if
+        # there is not a checkpoint file
+
         if sm_mol:
             # TODO: Use these variables in the sm_mol function to get
             # parameters. Maybe save the small molecule params in a csv file?
+
             smol_name = sm_mol[0]
             smol_conc = float(sm_mol[1])
             comp_dist = float(sm_mol[2])
@@ -437,6 +441,10 @@ def simulate(args):
             sigma = "None"
 
     else:
+        # This code will get executed if there is a checkpoint file and
+        # will load the previously used small molecule parameters and
+        # configuration.
+
         logger.info("\nReading small molecules from stored files...")
         top_ats = pd.read_csv(folder_path + "sm_drg_ats.csv")
 
@@ -502,6 +510,7 @@ def simulate(args):
     ah.setNonbondedMethod(openmm.openmm.CustomNonbondedForce.CutoffPeriodic)
     hb.setUsesPeriodicBoundaryConditions(True)
 
+    # Generating system if a checkpoint file is not found.
     if not os.path.isfile(check_point):
         system.addForce(hb)
         system.addForce(yu)
@@ -519,6 +528,7 @@ def simulate(args):
         outfile.write(serialized_system)
         outfile.close()
 
+    # Skippng system generation if a checkpoint file is found.
     else:
         logger.info("\nCheckpoint file found, skipping system generation.")
         logger.debug(f"System num parts: {system.getNumParticles()}\n")
@@ -723,7 +733,7 @@ if __name__ == "__main__":
     args = ut.arg_parse()
 
     # Getting the main script path
-    real_path = os.path.split(os.path.realpath(__file__))[0]  
+    real_path = os.path.split(os.path.realpath(__file__))[0]
 
     # Using the 'simulate' subcommand
     if args.subparser_name == "simulate":
