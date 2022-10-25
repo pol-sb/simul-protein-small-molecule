@@ -622,8 +622,8 @@ def custom_logger(args):
     folder_path, prefix = create_dirs(args)
 
     # fmt_str = "\n%(asctime)s - %(levelname)s:\n\t %(message)s"
-    # logname = f"./{args.name[0]}/{int(args.temp[0])}/idp-simul_logger.out"
-    logname = f"{folder_path}/idp-simul_logger.out"
+    # logname = f"./{args.name[0]}/{int(args.temp[0])}/idp-simul_logger.log"
+    logname = f"{folder_path}/idp-simul_logger.log"
 
     # Format strings for the debug logger
     fmt_debug = "%(asctime)s | %(levelname)s | %(message)s"
