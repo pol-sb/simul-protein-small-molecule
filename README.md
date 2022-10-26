@@ -208,9 +208,10 @@ A [pandas](https://pandas.pydata.org/) [dataframe](https://pandas.pydata.org/doc
 
 The dataframe has a (N, 16) shape, where N represents the number of simulations contained in the dataframe and 16 the different data fields, whioch are represented by columns in the dataframe sample (for a single simulation) depicted below:
 
-| protein | small_molec | conc | lambd    | sigma | temp  | idp_average                  | drg_average               | hash         | extension | sim_time  | time_unit  | idp_plat_avg | drg_plat_avg | drg_dilu_avg | drg_dilu_avg |
-|---------|-------------|------|----------|-------|-------|------------------------------|---------------------------|--------------|-----------|-----------|------------|--------------|--------------|--------------|--------------|
-| Q5-8_20 | GLY         | 20.0 | 0.000000 | 2.099 | 290.0 | [[0.0, 0.0], ... | [[0.0, 3.1], ... | 410448100... | None      | 145000000 | iterations | 703.942982   | 0.045579     | 25.577564    | 3.091646     |
+| protein | small_molec | conc |   lambd  | sigma |  temp |          idp_average         |        drg_average        |     hash     | extension |  sim_time |  time_unit | idp_plat_avg | drg_plat_avg | drg_dilu_avg | drg_dilu_avg |
+|:-------:|:-----------:|:----:|:--------:|:-----:|:-----:|:----------------------------:|:-------------------------:|:------------:|:---------:|:---------:|:----------:|:------------:|:------------:|:------------:|:------------:|
+| Q5-8_20 |     GLY     | 20.0 | 0.000000 | 2.099 | 290.0 | [[0.0, 0.0], [1.0, 0.0], ... | [[0.0, 3.1], [1.0, 3.1... | 410448100... |    None   | 145000000 | iterations |  703.942982  |   0.045579   |   25.577564  |   3.091646   |
+|   ...   |     ...     |  ... |    ...   |  ...  |  ...  |              ...             |            ...            |      ...     |    ...    |    ...    |     ...    |      ...     |      ...     |      ...     |      ...     |
 
 - `protein`: Name of the IDP used during the simulation. The available proteins are described in [this file](./data/proteins.csv) or its pickle variant in the same folder.
 - `small_molec`: Name(s) of the small molecule(s) used during the simulation.
