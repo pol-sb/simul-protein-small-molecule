@@ -203,4 +203,28 @@ The script produces several output files after a simulation. Using as an example
 
 - `XXXX_YYY.log`: Log file containing information about the system's energies, performance and simulation times.
 
-A dataframe containing of some of the most important results obtained from the simulations can be found in the [results](./results/) folder. The dataframe can be accessed using [pandas](https://pandas.pydata.org/). Some sample visualizations and usage examples are included in a python notebook on the same directory.
+### Results dataframe
+A [pandas](https://pandas.pydata.org/) [dataframe](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) containing of some of the most important results obtained from the simulations can be found in the [results](./results/) folder. The dataframe can be accessed using [pandas](https://pandas.pydata.org/). Additionally, some sample visualizations and usage examples are included in a python [notebook on the same directory](./result_analysis/vis_db.ipynb).
+
+The dataframe has a (N, 16) shape, where N represents the number of simulations contained in the dataframe and 16 the different data fields, whioch are represented by columns in the dataframe sample (for a single simulation) depicted below:
+
+| protein | small_molec | conc | lambd    | sigma | temp  | idp_average                  | drg_average               | hash         | extension | sim_time  | time_unit  | idp_plat_avg | drg_plat_avg | drg_dilu_avg | drg_dilu_avg |
+|---------|-------------|------|----------|-------|-------|------------------------------|---------------------------|--------------|-----------|-----------|------------|--------------|--------------|--------------|--------------|
+| Q5-8_20 | GLY         | 20.0 | 0.000000 | 2.099 | 290.0 | [[0.0, 0.0], ... | [[0.0, 3.1], ... | 410448100... | None      | 145000000 | iterations | 703.942982   | 0.045579     | 25.577564    | 3.091646     |
+
+- `protein`: Name of the IDP used during the simulation. The available proteins are described in [this file](./data/proteins.csv) or its pickle variant in the same folder.
+- `small_molec`: Name(s) of the small molecule(s) used during the simulation.
+- `conc`: Concentration (in mM) of the added small molecule (if added).
+- `lambd`: Lambda value(s) used for the small molecule(s).
+- `sigma`: Sigma value(s) used for the small molecule(s).
+- `temp`: Temperature at which the simulation is performed.
+- `idp_average`: Numpy array containing the IDP particle count along the z axis of the simulation cell.
+- `drg_average`: Numpy array containing the small molecule count along the z axis of the simulation cell.
+- `hash`: Unique hash number assigned to each simulation for easier identification.
+- `extension`: If an extension of the simulation is performed when the simulation is finished (if any), the duration and temperature used is shown here.
+- `sim_time`: Runtime of the simulation, without units (timesteps or seconds), the units are specifed on the `time_unit` column.
+- `time_unit`: Simulation time units.
+- `idp_plat_avg`: Average density value for the IDP particles in the condensate region of the simulation cell.
+- `drg_plat_avg`: Average density value for the small molecules in the condensate region of the simulation cell.
+- `drg_dilu_avg`: Average density value for the IDP particles in the dilute region of the simulation cell.
+- `drg_dilu_avg`: Average density value for the small molecules particles in the dilute region of the simulation cell.
