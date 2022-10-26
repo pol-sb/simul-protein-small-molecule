@@ -216,8 +216,8 @@ The dataframe has a (N, 16) shape, where N represents the number of simulations 
 - `protein`: Name of the IDP used during the simulation. The available proteins are described in [this file](./data/proteins.csv) or its pickle variant in the same folder.
 - `small_molec`: Name(s) of the small molecule(s) used during the simulation.
 - `conc`: Concentration (in mM) of the added small molecule (if added).
-- `lambd`: Stickiness ($\lambda$) value(s) used for the small molecule(s).
-- `sigma`: Particle size ($\sigma$) value(s) used for the small molecule(s).
+- `lambd`: Stickiness $(\lambda)$ value(s) used for the small molecule(s).
+- `sigma`: Particle size $(\sigma)$ value(s) used for the small molecule(s).
 - `temp`: Temperature at which the simulation is performed.
 - `idp_average`: Numpy array containing the IDP particle count along the z axis of the simulation cell.
 - `drg_average`: Numpy array containing the small molecule count along the z axis of the simulation cell.
