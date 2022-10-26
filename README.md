@@ -204,7 +204,7 @@ The script produces several output files after a simulation. Using as an example
 - `XXXX_YYY.log`: Log file containing information about the system's energies, performance and simulation times.
 
 ### Results dataframe
-A [pandas](https://pandas.pydata.org/) [dataframe](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) containing of some of the most important results obtained from the simulations can be found in the [results](./results/) folder. The dataframe can be accessed using [pandas](https://pandas.pydata.org/). Additionally, some sample visualizations and usage examples are included in a python [notebook on the same directory](./result_analysis/vis_db.ipynb).
+A [dataframe](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html) from the [pandas](https://pandas.pydata.org/) library, containing of some of the most important results obtained from the simulations can be found in the [results](./results/) folder. The dataframe can be accessed using [pandas](https://pandas.pydata.org/). Additionally, some sample visualizations and usage examples are included in a python notebook on the [result analysis directory](./result_analysis/vis_db.ipynb).
 
 The dataframe has a (N, 16) shape, where N represents the number of simulations contained in the dataframe and 16 the different data fields, whioch are represented by columns in the dataframe sample (for a single simulation) depicted below:
 
