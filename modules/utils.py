@@ -784,27 +784,23 @@ def create_hash(params):
 
 def write_params(
     path: str,
-    name,
-    temp,
+    args,
     sm_mol,
     drg_param,
     sim_time,
     time_units,
-    sigma,
-    mass,
-    extension,
 ):
 
     param_list = [
-        name,
-        temp,
+        args.name,
+        args.temp,
         sm_mol,
         drg_param,
         sim_time,
         time_units,
-        sigma,
-        mass,
-        extension,
+        args.sigma,
+        args.mass,
+        args.extend_thermostat,
         time.strftime("%d.%m.%Y - %H:%M:%S"),
     ]
 
@@ -813,8 +809,9 @@ def write_params(
     with open(path, "w+") as f:
         f.write("# Simulation parameters\n")
         f.write(f"# {time.strftime('%d.%m.%Y - %H:%M:%S')}\n\n")
-        f.write(f"PROT_NAME\t{name}\n")
-        f.write(f"TEMP_(K)\t{temp}\n")
+        f.write(f"SUBPARSER\t{args.subparser_name}\n")
+        f.write(f"PROT_NAME\t{args.name}\n")
+        f.write(f"TEMP_(K)\t{args.temp}\n")
 
         if sm_mol is None:
             sm_mol = ["NODRG", 0, 0]
@@ -825,12 +822,13 @@ def write_params(
         f.write(f"DRG_NUMB\t{str(drg_param[1])}\n")
         f.write(f"DRG_DIST_(nm)\t{sm_mol[2]}\n")
         f.write(f"DRG_LAMB\t{drg_param[0]}\n")
-        f.write(f"DRG_SIGMA\t{sigma}\n")
-        f.write(f"DRG_MASS\t{mass}\n")
+        f.write(f"DRG_SIGMA\t{args.sigma}\n")
+        f.write(f"DRG_MASS\t{args.mass}\n")
         f.write(f"SIM_TIME\t{sim_time}\n")
         f.write(f"TIME_UNIT\t{time_units}\n")
-        f.write(f"EXTENSION\t{extension}\n")
+        f.write(f"EXTENSION\t{args.extend_thermostat}\n")
         f.write(f"HASH\t{hash_str}\n")
+
 
 
 def send_notif(title, body, pb_token):

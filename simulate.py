@@ -587,15 +587,11 @@ def simulate(args):
         # data analysis and results parsing later
         ut.write_params(
             path=f"./{folder_path}/parameters.dat",
-            name=name,
-            temp=temp,
+            args=args,
             sm_mol=sm_mol,
             drg_param=drg_param,
             sim_time=sim_time,
             time_units=time_units,
-            sigma=sigma,
-            mass=mass_override,
-            extension=args.extend_thermostat,
         )
 
         print("")
