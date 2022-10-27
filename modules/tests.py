@@ -394,7 +394,7 @@ def minimize_montecarlo(args, real_path, logger, folder):
 
     sim_time_ns = ut.timesteps_to_ns(sim_time)
 
-    simulation.saveState(f"{folder}/res_minimization_state.xml")
+    simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
     energy_list = []
 
     in_pot_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
@@ -404,7 +404,7 @@ def minimize_montecarlo(args, real_path, logger, folder):
         energy_list.append(in_pot_energ._value)
 
         print("")
-        logger.info(f"MC minimization step: {run_ind}")
+        logger.info(f"MC minimization step: {run_ind+1}/{n_mc_runs[0]}")
 
         logger.info(
             f"Running simulation for {sim_time} {time_units} ({sim_time_ns} ns)."
@@ -420,21 +420,22 @@ def minimize_montecarlo(args, real_path, logger, folder):
             logger.info(f"Energy difference: {run_pot_energ-in_pot_energ}")
             in_pot_energ = run_pot_energ
             logger.info(f"Current energy: {in_pot_energ}")
-            simulation.saveState(f"{folder}/res_minimization_state.xml")
+            simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
 
         else:
             logger.info(f"Energy unchanged.")
             logger.info(f"Current energy: {in_pot_energ}")
             logger.info(f"Run energy: {run_pot_energ}")
-            simulation.loadState(f"{folder}/res_minimization_state.xml")
+            simulation.loadState(f"{folder}/res_mc_minimization_state.xml")
 
     print("")
 
     energ_array = np.array([range(n_mc_runs[0]), energy_list]).T
-    logger.info(f"Energies stored in '{folder}/res_minimization_energies.log'.")
+    logger.info(f"Energies stored in '{folder}/res_mc_minimization_energies.log'.")
     np.savetxt(
-        f"{folder}/res_minimization_energies.log",
+        f"{folder}/res_mc_minimization_energies.log",
         energ_array,
+        header=f"# {n_mc_runs[0]} {sim_time}"
     )
 
     # Saving final system position.
@@ -442,11 +443,11 @@ def minimize_montecarlo(args, real_path, logger, folder):
     app.PDBFile.writeFile(
         simulation.topology,
         positions,
-        open(f"{folder}/res_finalsystem.pdb", "w"),
+        open(f"{folder}/res_mc_finalsystem.pdb", "w"),
     )
 
     # Plotting energy variation
     plt.plot(energ_array[1:, 0], energ_array[1:, 1])
     plt.xlabel("Iteration")
     plt.ylabel("Potential Energy (kJ/mol)")
-    plt.savefig(f"{folder}/res_energ_plot.png", dpi=200)
+    plt.savefig(f"{folder}/res_mc_energ_plot.png", dpi=200)
