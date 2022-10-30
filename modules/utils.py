@@ -523,6 +523,8 @@ def arg_parse():
 
     sim_par = parser.add_subparsers(
         title="Operation Modes",
+        metavar="subparser",
+        help="Subcommands that are used to select the operation mode of the program.",
         description="Subcommands that are used to select the operation mode of the program.",
         required=True,
         dest="subparser_name",
@@ -558,12 +560,37 @@ def arg_parse():
     )
 
     subp_montecarlo = subp4_tests.add_parser(
-        "dynamic-minimize",
+        "minimize",
         # parents=[sim_par],
-        aliases=["dynmin", "montecarlo"],
-        help="This command allows to iteratively minimize the energy of an IDP system.",
+        aliases=["dynmin", "montecarlo", "dynamic-minimize"],
+        help="This command allows to iteratively modify a reaction coordinate of an IDP system.",
         description="Run short molecular dynamics simulations in a certain IDP system containing"
-        " small molecules and accept the trajectory if the energy is reduced.",
+        " small molecules and accept the trajectory according to a reaction coordinate modification. "
+        "Available parameters shown below:",
+    )
+
+    # Creating group for the minimization parameter
+    minim_group = subp_montecarlo.add_argument_group(title="Minimization parameters")
+
+    # Mutually exclusive group so only one of the parameters is allowed at once.
+    minim_excl_group = minim_group.add_mutually_exclusive_group(required=True)
+    
+    minim_excl_group.add_argument(
+        "--potential",
+        "--potenerg",
+        "--Uenerg",
+        action="store_true",
+        help="If this argument is passed, the program will minimize the potential energy.",
+    )
+
+    minim_excl_group.add_argument(
+        "--dispersion",
+        "--disp",
+        "--particle_dispersion",
+        "--particle_disp",
+        "--p_disp",
+        action="store_true",
+        help="If this argument is passed, the program will minimize the particle dispersion.",
     )
 
     subp5 = add_simulargs_to_parser(subp_montecarlo)

@@ -1,27 +1,29 @@
 import time
 from ast import literal_eval
 
+import matplotlib.pyplot as plt
 import openmm
 import openmm.unit as unit
 import pandas as pd
+import scipy as sci
 import simulate as sim
 from openmm import XmlSerializer, app
 
 import modules.small_molecule as smol
 import modules.utils as ut
 from modules.analyse import *
-import matplotlib.pyplot as plt
 
 
 def minimize_montecarlo(args, real_path, logger, folder):
-    """This function attempts to reduce the energy by performing short MD simulations
-    and comparing the final energy obtained with the initial one. If the new energy
-    is smaller, the final state of the simulation is kept as the system's current state,
-    otherwise the trajectory is discarded and computed again.
+    if args.potential:
+        minimize_potential_en(args, real_path, logger, folder)
+    elif args.dispersion:
+        minimize_dispersion(args, real_path, logger, folder)
+    else:
+        raise NotImplementedError()
 
-    Args:
-        args (argparse.Namespace): Namespace containing the user input arguments.
-    """
+
+def setup_montecarlo(args, real_path, logger, folder):
 
     logger.info("Performing Monte Carlo minimization.")
     print("")
@@ -107,7 +109,6 @@ def minimize_montecarlo(args, real_path, logger, folder):
 
         # print('check_point: ', check_point)
         check_point = chk_path + "/" + chk_file
-        
 
         # check_point = chk_path + f"/{name}_{temp}_{sm_mol[0]}_restart.chk"
         # except TypeError:
@@ -115,7 +116,7 @@ def minimize_montecarlo(args, real_path, logger, folder):
     else:
         logger.info(f"Starting new simulation...")
         print("")
-        check_point = ''
+        check_point = ""
 
     # Saving a .pdb file with the current configuration.
     logger.info(f"Storing files in {folder}")
@@ -292,7 +293,6 @@ def minimize_montecarlo(args, real_path, logger, folder):
         simulation.loadCheckpoint(check_point)
         logger.info("Checkpoint loaded!")
 
-    if os.path.isfile(check_point) and args.resume:
         try:
             simulation.reporters.append(
                 app.dcdreporter.DCDReporter(
@@ -313,15 +313,11 @@ def minimize_montecarlo(args, real_path, logger, folder):
         # data analysis and results parsing later
         ut.write_params(
             path=f"./{folder}/parameters.dat",
-            name=name,
-            temp=temp,
+            args=args,
             sm_mol=sm_mol,
             drg_param=drg_param,
             sim_time=sim_time,
             time_units=time_units,
-            sigma=sigma,
-            mass=mass_override,
-            extension=args.extend_thermostat,
         )
 
         print("")
@@ -395,16 +391,43 @@ def minimize_montecarlo(args, real_path, logger, folder):
     sim_time_ns = ut.timesteps_to_ns(sim_time)
 
     simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
+
+    return simulation, system, top, sim_time, time_units, sim_time_ns
+
+
+def minimize_potential_en(args, real_path, logger, folder):
+    """This function attempts to reduce the energy by performing short MD simulations
+    and comparing the final energy obtained with the initial one. If the new energy
+    is smaller, the final state of the simulation is kept as the system's current state,
+    otherwise the trajectory is discarded and computed again.
+
+    Args:
+        args (argparse.Namespace): Namespace containing the user input arguments.
+    """
+
+    (
+        simulation,
+        system,
+        top,
+        sim_time,
+        time_units,
+        sim_time_ns,
+    ) = setup_montecarlo(args, real_path, logger, folder)
+
+    logger.info("Minimizing potential energy.")
+
     energy_list = []
 
-    in_pot_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
+    first_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
 
-    for run_ind in range(n_mc_runs[0]):
+    for run_ind in range(args.runs[0]):
+
+        in_pot_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
 
         energy_list.append(in_pot_energ._value)
 
         print("")
-        logger.info(f"MC minimization step: {run_ind+1}/{n_mc_runs[0]}")
+        logger.info(f".:: MC minimization step: {run_ind+1}/{args.runs[0]} ::.")
 
         logger.info(
             f"Running simulation for {sim_time} {time_units} ({sim_time_ns} ns)."
@@ -416,26 +439,35 @@ def minimize_montecarlo(args, real_path, logger, folder):
         run_pot_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
 
         if run_pot_energ < in_pot_energ:
-            logger.info("[!] Run minimized energy.")
-            logger.info(f"Energy difference: {run_pot_energ-in_pot_energ}")
-            in_pot_energ = run_pot_energ
-            logger.info(f"Current energy: {in_pot_energ}")
-            simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
-
-        else:
-            logger.info(f"Energy unchanged.")
             logger.info(f"Current energy: {in_pot_energ}")
             logger.info(f"Run energy: {run_pot_energ}")
+            logger.info(f"Energy difference: {run_pot_energ-in_pot_energ}")
+            logger.info("[!] Run minimized energy.")
+            simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
+            in_pot_energ = run_pot_energ
+
+        else:
+            logger.info(f"Current energy: {in_pot_energ}")
+            logger.info(f"Run energy: {run_pot_energ}")
+            logger.info(f"Energy unchanged.")
             simulation.loadState(f"{folder}/res_mc_minimization_state.xml")
 
     print("")
 
-    energ_array = np.array([range(n_mc_runs[0]), energy_list]).T
-    logger.info(f"Energies stored in '{folder}/res_mc_minimization_energies.log'.")
+    energ_array = np.array([range(args.runs[0]), energy_list]).T
+
+    logger.info("Minimization done.")
+    logger.info(f"Energy difference = {abs(in_pot_energ - first_energ)}")
+
+    print("")
+
+    res_filename = f"{folder}/res_mc_minimization_energies.log"
+
+    logger.info(f"Energies stored in {res_filename}.")
     np.savetxt(
-        f"{folder}/res_mc_minimization_energies.log",
+        res_filename,
         energ_array,
-        header=f"# {n_mc_runs[0]} {sim_time}"
+        header=f"{args.runs[0]} {sim_time}",
     )
 
     # Saving final system position.
@@ -451,3 +483,136 @@ def minimize_montecarlo(args, real_path, logger, folder):
     plt.xlabel("Iteration")
     plt.ylabel("Potential Energy (kJ/mol)")
     plt.savefig(f"{folder}/res_mc_energ_plot.png", dpi=200)
+
+
+def compute_dispersion(simulation, top):
+
+    # Gathering all particle coordinates from the current simulation state into a
+    # numpy array
+    coord = (
+        simulation.context.getState(getPositions=True).getPositions(asNumpy=True)
+        / unit.nanometer
+    )
+
+    # Length of chain 0. All chains should be equal except the last one,
+    # which is the one containing the small molecules
+    for chain in top.chains():
+        idp_chain_count = len(list(top.chains())) - 1
+        idp_chain_length = len(list(chain.atoms()))
+        break
+
+    # Splitting the coordinate array into sub arrays size equal to the atom count in
+    # the chains. The last chain is omitted as it contains the small molecules.
+    idp_chain_coords = np.vsplit(
+        coord[: idp_chain_count * idp_chain_length, :], idp_chain_count
+    )
+
+    # Empty list for the distance averages.
+    idp_chain_averages = []
+
+    # Finding the average point of every chain and adding it to a list.
+    for chain in idp_chain_coords:
+        idp_chain_averages.append(np.average(chain, axis=0))
+
+    # Finding the distance between all of the average points
+    distance_allchains = sci.spatial.distance.pdist(np.array(idp_chain_averages))
+
+    # Computing the average of all chain average distances.
+    avg_distance_allchains = np.average(distance_allchains)
+
+    return avg_distance_allchains
+
+
+def minimize_dispersion(args, real_path, logger, folder):
+    """This function attempts to reduce the particle dispersion by performing short MD simulations
+    and comparing the final dispersion obtained with the initial one. If the new value
+    is smaller, the final state of the simulation is kept as the system's current state,
+    otherwise the trajectory is discarded and computed again.
+
+    Args:
+        args (argparse.Namespace): Namespace containing the user input arguments.
+    """
+
+    (
+        simulation,
+        system,
+        topology,
+        sim_time,
+        time_units,
+        sim_time_ns,
+    ) = setup_montecarlo(args, real_path, logger, folder)
+
+    logger.info("Minimizing particle dispersion.")
+
+    energy_list = []
+
+    # Storing initial dispersion.
+    first_disp = compute_dispersion(simulation, topology)
+
+    for run_ind in range(args.runs[0]):
+
+        # Computing initial dispersion (in nm).
+        in_disp = compute_dispersion(simulation, topology)
+
+        # Adding initial dispersion to a list.
+        energy_list.append(in_disp)
+
+        print("")
+        logger.info(f".:: MC minimization step: {run_ind+1}/{args.runs[0]} ::.")
+
+        logger.info(
+            f"Running simulation for {sim_time} {time_units} ({sim_time_ns} ns)."
+        )
+
+        # Running the simulations for the given timesteps.
+        simulation.step(sim_time)
+
+        # Computing current run's dispersion (in nm).
+        run_disp = compute_dispersion(simulation, topology)
+
+        # Checking dispersion distance difference.
+        if run_disp < in_disp:
+            logger.info(f"Current dispersion: {in_disp} nm")
+            logger.info(f"Run dispersion: {run_disp} nm")
+            logger.info(f"Dispersion difference: {run_disp-in_disp} nm")
+            logger.info("[!] Run decreased dispersion.")
+            simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
+            in_disp = run_disp
+
+        else:
+            logger.info(f"Current dispersion: {in_disp} nm")
+            logger.info(f"Run dispersion: {run_disp} nm")
+            logger.info(f"Dispersion unchanged.")
+            simulation.loadState(f"{folder}/res_mc_minimization_state.xml")
+
+    print("")
+
+    energ_array = np.array([range(args.runs[0]), energy_list]).T
+
+    logger.info("Minimization done.")
+    logger.info(f"Total dispersion variation = {abs(in_disp - first_disp)} nm")
+
+    print("")
+
+    res_filename = f"{folder}/res_mc_minimization_dispersion.log"
+
+    logger.info(f"Dispersion values stored in '{res_filename}'.")
+    np.savetxt(
+        res_filename,
+        energ_array,
+        header=f"{args.runs[0]} {sim_time}",
+    )
+
+    # Saving final system position.
+    positions = simulation.context.getState(getPositions=True).getPositions()
+    app.PDBFile.writeFile(
+        simulation.topology,
+        positions,
+        open(f"{folder}/res_mc_finalsystem.pdb", "w"),
+    )
+
+    # Plotting energy variation
+    plt.plot(energ_array[1:, 0], energ_array[1:, 1])
+    plt.xlabel("Iteration")
+    plt.ylabel("Particle Dispersion (nm)")
+    plt.savefig(f"{folder}/res_mc_disp_plot.png", dpi=200)
