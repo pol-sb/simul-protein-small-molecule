@@ -771,6 +771,7 @@ if __name__ == "__main__":
 
         # Checking the current script version.
         ut.check_version(real_path)
+        args.notif = False
 
     elif args.subparser_name == "tests":
 
@@ -781,6 +782,7 @@ if __name__ == "__main__":
 
         vars(args)["verbosity"] = verbosity
         tst.minimize_montecarlo(args, real_path, logger, folder_path)
+
 
     # Attempting to send a push notification to a pushbullet account to notify the
     # end of the simulation. Needs a pushbullet API key which has to be stored in the
