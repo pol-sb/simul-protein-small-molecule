@@ -10,5 +10,5 @@ test_openmm_local.py
 top
 modules/.pbtoken
 launcher.py
-
+.vscode
 pickle_to_csv.py
