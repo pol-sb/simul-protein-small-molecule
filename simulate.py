@@ -311,8 +311,7 @@ def select_platform(plat_cpu, plat_gpu, logger):
     return platform, platform_props
 
 
-def simulate(args):
-    # arg_dict = args.__dict__
+def simulate(args, folder_path):
 
     residues = args.residues
     name = args.name[0]
@@ -328,7 +327,7 @@ def simulate(args):
     sigma_override = args.sigma
     mass_override = args.mass
 
-    folder_path = name + f"/{temp}/"
+    #folder_path = name + f"/{temp}/"
 
     residues = residues.set_index("one")
 
@@ -364,7 +363,8 @@ def simulate(args):
     )
 
     # Attempting to create directories in which to save the topology
-    folder_path, prefix = ut.create_dirs(args)
+    # folder_path, prefix = ut.create_dirs(args)
+    print(folder_path)
 
     # Checking if there is a checkpoint file
     try:
@@ -763,7 +763,7 @@ if __name__ == "__main__":
         vars(args)["verbosity"] = verbosity
 
         # Running main simulation function
-        simulate(args)
+        simulate(args, folder_path)
         logger.info(f"Simulation Done. Total time: {time.time()-t0:.1f} s.")
 
     # Using the 'check_version' subcommand.
@@ -781,8 +781,12 @@ if __name__ == "__main__":
         logger, verbosity, folder_path = ut.custom_logger(args)
 
         vars(args)["verbosity"] = verbosity
-        tst.minimize_montecarlo(args, real_path, logger, folder_path)
 
+        if args.test_name == "minimize":
+            tst.minimize_montecarlo(args, real_path, logger, folder_path)
+
+        elif args.test_name == "cont-nodrg":
+            tst.resume_nodrg(args, real_path, logger, folder_path)
 
     # Attempting to send a push notification to a pushbullet account to notify the
     # end of the simulation. Needs a pushbullet API key which has to be stored in the
