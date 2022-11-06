@@ -574,7 +574,7 @@ def arg_parse():
 
     # Mutually exclusive group so only one of the parameters is allowed at once.
     minim_excl_group = minim_group.add_mutually_exclusive_group(required=True)
-    
+
     minim_excl_group.add_argument(
         "--potential",
         "--potenerg",
@@ -605,6 +605,14 @@ def arg_parse():
         metavar="NAME",
         help="Number of minimization runs to be performed.",
         required=True,
+    )
+
+    subp_contnodrg = subp4_tests.add_parser(
+        "cont-nodrg",
+        aliases=["nodrg", "contnodrg", "continue-nodrg"],
+        help="This command allows to resume a simulation removing the small molecules added previously.",
+        description="Continue molecular dynamics simulations for IDP systems using previously generated"
+        " checkpoints, removing any small molecules present. ",
     )
 
     args = parser.parse_args()
@@ -715,7 +723,7 @@ def custom_logger(args):
         fmt_string = fmt_info
 
     # create logger
-    logger = logging.getLogger("main simulation")
+    logger = logging.getLogger("idp-simul logger")
     logger.addHandler(stdout_handler)
     verbosity = [verb, fmt_string]
 
@@ -819,15 +827,11 @@ def write_params(
 ):
 
     param_list = [
-        args.name,
-        args.temp,
+        args.__dict__.values(),
         sm_mol,
         drg_param,
         sim_time,
         time_units,
-        args.sigma,
-        args.mass,
-        args.extend_thermostat,
         time.strftime("%d.%m.%Y - %H:%M:%S"),
     ]
 
@@ -836,26 +840,15 @@ def write_params(
     with open(path, "w+") as f:
         f.write("# Simulation parameters\n")
         f.write(f"# {time.strftime('%d.%m.%Y - %H:%M:%S')}\n\n")
-        f.write(f"SUBPARSER\t{args.subparser_name}\n")
-        f.write(f"PROT_NAME\t{args.name}\n")
-        f.write(f"TEMP_(K)\t{args.temp}\n")
 
-        if sm_mol is None:
-            sm_mol = ["NODRG", 0, 0]
-            drg_param = ["None", 0]
+        for key, value in args.__dict__.items():
+            if key not in ["proteins", "residues", "verbosity"]:
+                key = key.upper()
+                value = str(value).replace("'", "").replace("[", "").replace("]", "")
 
-        f.write(f"DRG_NAME\t{sm_mol[0]}\n")
-        f.write(f"DRG_CONC_(mM)\t{sm_mol[1]}\n")
-        f.write(f"DRG_NUMB\t{str(drg_param[1])}\n")
-        f.write(f"DRG_DIST_(nm)\t{sm_mol[2]}\n")
-        f.write(f"DRG_LAMB\t{drg_param[0]}\n")
-        f.write(f"DRG_SIGMA\t{args.sigma}\n")
-        f.write(f"DRG_MASS\t{args.mass}\n")
-        f.write(f"SIM_TIME\t{sim_time}\n")
-        f.write(f"TIME_UNIT\t{time_units}\n")
-        f.write(f"EXTENSION\t{args.extend_thermostat}\n")
+                f.write(f"{key}\t{value}\n")
+
         f.write(f"HASH\t{hash_str}\n")
-
 
 
 def send_notif(title, body, pb_token):

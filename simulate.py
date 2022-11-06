@@ -781,8 +781,12 @@ if __name__ == "__main__":
         logger, verbosity, folder_path = ut.custom_logger(args)
 
         vars(args)["verbosity"] = verbosity
-        tst.minimize_montecarlo(args, real_path, logger, folder_path)
 
+        if args.test_name == "minimize":
+            tst.minimize_montecarlo(args, real_path, logger, folder_path)
+
+        elif args.test_name == "cont-nodrg":
+            tst.resume_nodrg(args, real_path, logger, folder_path)
 
     # Attempting to send a push notification to a pushbullet account to notify the
     # end of the simulation. Needs a pushbullet API key which has to be stored in the
