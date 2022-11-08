@@ -437,7 +437,8 @@ def add_simulargs_to_parser(parser):
 
     g4.add_argument(
         "--notif",
-        help="Send PB notification",
+        "--notify",
+        help="Send push notification",
         action="store_true",
     )
 

@@ -171,7 +171,7 @@ The available arguments are:
 - Output options:
   - `-v` or `--verbose`: Increase output verbosity
   - `-q` or `--quiet`: Decrease output verbosity
-  - `--notif`: Allows to send a pushbullet notification using a pushbullet api key placed in a `.pbtoken` file in the root folder of the program.
+  - `--notif` or `--notify`: Allows to send a push notification to a smartphone using the ntfy.sh open source service. The ntfy app must be downloaded on the target smartphone, a ntfy topic must be created and its name placed in the `modules/.ntfy_topic` file in the [modules](./modules/) folder of the program.
 
 - Simulation time selection:
   - `--nsteps [NSTEPS]` or `--steps [NSTEPS]` or `-n [NSTEPS]`: Number of timesteps to run the simulation.
