@@ -851,13 +851,46 @@ def write_params(
         f.write(f"HASH\t{hash_str}\n")
 
 
-def send_notif(title, body, pb_token):
-    """Send notifications to pushbullet with the given API key."""
+def send_notif(title, body, topic_name, folder_path):
+    """
+    Send push notifications to a smartphone using the open source ntfy.sh service.
+    The ntfy app should be installed in the target smartphone, and a topic must be
+    created in the app. This topic's name must be added to the 'modules/.ntfy_topic'
+    file, which will be used to send the notification via a POST request.
+    See: https://ntfy.sh/ and https://ntfy.sh/docs/subscribe/phone/ for more information.
 
-    url = "https://api.pushbullet.com/v2/pushes"
-    headers = {f"Access-Token": pb_token, "Content-Type": "application/json"}
-    data = {"type": "note", "title": title, "body": body}
-    req = requests.post(url, auth=(pb_token, ""), data=data)
+    Args:
+        title (str): Title of the notification
+        body (str): Main body of the notification
+        pb_token (str): Name of the ntfy topic. Used for the request.
+    """
+
+    files = [f for f in os.listdir(folder_path) if f.endswith(".png")]
+    if len(files) > 0:
+        img_name = files[0]
+        image_path = f"{folder_path}/{img_name}"
+    else:
+        image_path = ""
+
+    requests.post(
+        f"https://ntfy.sh/{topic_name}",
+        data=body,
+        headers={
+            "Title": title,
+            "Tags": "white_check_mark,atom_symbol",
+        },
+    )
+
+    if image_path:
+        requests.post(
+            f"https://ntfy.sh/{topic_name}",
+            data=open(image_path, "rb"),
+            headers={
+                "Title": title,
+                "Tags": "white_check_mark,atom_symbol",
+                "Filename": img_name,
+            },
+        )
 
 
 def timesteps_to_ns(timesteps):
