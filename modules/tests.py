@@ -15,6 +15,23 @@ from modules.analyse import *
 
 
 def minimize_montecarlo(args, real_path, logger, folder):
+    """This function checks which reaction coordinate is specified
+    at launch in the program arguments and runs the appropiate
+    function to minimize it.
+
+    Args:
+        args (argparse.Namespace): Python's argparse object containing the simulation arguments
+        real_path (str): path of the script
+        logger (logging.Logger): Logger object used to write the simulation logs
+        folder (str): Path to the result's folder
+
+    Raises:
+        NotImplementedError: If a minimization algorithm is not yet implemented this error will be raised.
+    """
+
+    logger.info("Performing Monte Carlo minimization.")
+    print("")
+
     if args.potential:
         minimize_potential_en(args, real_path, logger, folder)
     elif args.dispersion:
@@ -24,9 +41,23 @@ def minimize_montecarlo(args, real_path, logger, folder):
 
 
 def setup_montecarlo(args, real_path, logger, folder):
+    """This function sets up the simulation framework to be able to
+    perform minimization iterations in order to minimize a reaction coordinate.
 
-    logger.info("Performing Monte Carlo minimization.")
-    print("")
+    Args:
+        args (argparse.Namespace): Python's argparse object containing the simulation arguments
+        real_path (str): path of the script
+        logger (logging.Logger): Logger object used to write the simulation logs
+        folder (str): Path to the result's folder
+
+    Returns: sim_time, time_units, sim_time_ns
+        openmm.app.simulation.Simulation: OpenMM Simulation object
+        openmm.app.system.System: OpenMM System object
+        openmm.app.topology.Topology: OpenMM Topology object
+        int: Total simulation time
+        str: Units of the total simulation time
+        float: Total simulation time in nanoseconds
+    """
 
     residues = pd.read_csv(f"{real_path}/data/residues.csv").set_index(
         "three", drop=False
@@ -486,6 +517,18 @@ def minimize_potential_en(args, real_path, logger, folder):
 
 
 def compute_dispersion(simulation, top):
+    """This function computes the dispersion of all the IDP chains forming
+    the condensate. This is achieved by gathering all the IDP chains, removing the
+    small-molecule ones, and computing the distance between the average position of
+    all atoms in every chain.
+
+    Args:
+        simulation (openmm.app.simulation.Simulation): OpenMM Simulation object containing the system declaration and settings
+        top (openmm.app.topology.Topology): OpenMM Topology object containing the topology description of the IDP chains.
+
+    Returns:
+        numpy.double: Dispersion value in nm.
+    """
 
     # Gathering all particle coordinates from the current simulation state into a
     # numpy array
@@ -616,3 +659,144 @@ def minimize_dispersion(args, real_path, logger, folder):
     plt.xlabel("Iteration")
     plt.ylabel("Particle Dispersion (nm)")
     plt.savefig(f"{folder}/res_mc_disp_plot.png", dpi=200)
+
+
+def resume_nodrg(args, real_path, logger, folder):
+
+    logger.info(f"Attempting to resume a simulation...")
+    print("")
+
+    # Checking if there is a checkpoint file
+    chk_path, chk_file = ut.find_checkpoint()
+
+    if chk_path != "":
+        logger.info(f"Checkpoint file found in '{chk_path}.'")
+
+    # print('check_point: ', check_point)
+    check_point = chk_path + "/" + chk_file
+    print("check_point: ", check_point)
+    quit()
+
+    # This code will get executed if there is a checkpoint file and
+    # will load the previously used small molecule parameters and
+    # configuration
+
+    logger.info("\nReading small molecules from stored files...")
+    top_ats = pd.read_csv(chk_path + "/sm_drg_ats.csv")
+
+    # This was before: n_drugs = (len(top_ats) - n_parts_old) // 2
+    n_drugs = len(top_ats) - n_parts_old
+    logger.info(f"number of drugs: {n_drugs}")
+
+    top_bnd = np.load(chk_path + "/sm_drg_bnd.npy")
+    top = md.Topology.from_dataframe(top_ats, top_bnd)
+
+    in_traj = md.load(chk_path + "/final_system_state.pdb")
+
+    pdb = app.pdbfile.PDBFile(chk_path + "/sm_drg_traj.pdb")
+    top = pdb.getTopology()
+
+    # logger.info(f"in_traj top: {in_traj.topology}")
+
+    xml_path = [f for f in os.listdir(chk_path) if f.endswith(".xml")][0]
+
+    with open(chk_path + "/" + xml_path, "r") as f:
+        system_ser = f.read()
+        system = XmlSerializer.deserialize(system_ser)
+
+    # This block sets up particle interactions.
+    logger.info("Setting bonded and non-bonded interactions...")
+
+    # Adding a regular harmonic bond force
+    hb = openmm.openmm.HarmonicBondForce()
+
+    # This function defines the custom potentials used for the simulation
+    ah, yu = sim.set_custom_potentials(yukawa_kappa, lj_eps)
+
+    # This function  sets the parameters for the potentials of the AA of our main
+    # chains.
+    sim.set_AA_params(hb, ah, yu, n_chains, yukawa_eps, prot, N, residues)
+
+    logger.info("\nCheckpoint file found, skipping system generation.")
+    logger.debug(f"System num parts: {system.getNumParticles()}\n")
+
+    logger.debug(pdb.topology)
+
+    integrator = openmm.openmm.LangevinIntegrator(
+        temp * unit.kelvin, 0.01 / unit.picosecond, 0.005 * unit.picosecond
+    )
+
+    platform, platform_props = sim.select_platform(plat_cpu, plat_gpu, logger)
+
+    sim_time, time_units, log_report_interval, dcd_save_interval = sim.select_timestep(
+        sim_time
+    )
+
+    top = pdb.topology
+
+    simulation = app.simulation.Simulation(
+        top,
+        system,
+        integrator,
+        platform,
+        platformProperties=platform_props,
+    )
+
+    logger.info("\nResuming simulation from checkpoint file...")
+    simulation.loadCheckpoint(check_point)
+    logger.info("Checkpoint loaded!")
+
+    try:
+        simulation.reporters.append(
+            app.dcdreporter.DCDReporter(
+                f"{folder}/{name}_{temp}_{sm_mol[0]}_report_continue.dcd",
+                dcd_save_interval,
+                append=False,
+            )
+        )
+    except TypeError:
+        simulation.reporters.append(
+            app.dcdreporter.DCDReporter(
+                f"{folder}/{name}_{temp}_NODRG_report_continue.dcd",
+                dcd_save_interval,
+            )
+        )
+
+    # Checks if there is an existing .log file in order to select the .log file
+    # writing mode
+    if os.path.isfile(check_point):
+        append_mode = True
+        log_name = f"{folder}/{name}_{temp}.log"
+    else:
+        log_name = f"{folder}/{name}_{temp}.log"
+        append_mode = False
+
+    # Generates log file with information
+    simulation.reporters.append(
+        app.statedatareporter.StateDataReporter(
+            log_name,
+            reportInterval=log_report_interval,
+            potentialEnergy=True,
+            temperature=True,
+            step=True,
+            speed=True,
+            volume=True,
+            elapsedTime=True,
+            separator="\t",
+            append=append_mode,
+        )
+    )
+
+    # Save positions before starting the simulation.
+    positions = simulation.context.getState(getPositions=True).getPositions()
+    app.PDBFile.writeFile(
+        simulation.topology,
+        positions,
+        open(f"{folder}/initial_minimization.pdb", "w"),
+    )
+
+    sim_time_ns = ut.timesteps_to_ns(sim_time)
+
+    simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
+
+    return simulation, system, top, sim_time, time_units, sim_time_ns

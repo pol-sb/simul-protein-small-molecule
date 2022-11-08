@@ -2,15 +2,16 @@ import argparse
 import os
 import time
 from ast import literal_eval
+from socket import gethostname
 
 import openmm
 import openmm.unit as unit
 from openmm import XmlSerializer, app
 
-import modules.small_molecule as smol
 import modules.extensions as ext
-import modules.utils as ut
+import modules.small_molecule as smol
 import modules.tests as tst
+import modules.utils as ut
 from modules.analyse import *
 
 
@@ -327,7 +328,7 @@ def simulate(args, folder_path):
     sigma_override = args.sigma
     mass_override = args.mass
 
-    #folder_path = name + f"/{temp}/"
+    # folder_path = name + f"/{temp}/"
 
     residues = residues.set_index("one")
 
@@ -782,21 +783,24 @@ if __name__ == "__main__":
 
         vars(args)["verbosity"] = verbosity
 
-        if args.test_name == "minimize":
+        if args.test_name in ["minimize", "montecarlo", "dynmin", "dynamic-minimize"]:
             tst.minimize_montecarlo(args, real_path, logger, folder_path)
 
-        elif args.test_name == "cont-nodrg":
+        elif args.test_name in ["nodrg", "contnodrg", "continue-nodrg"]:
             tst.resume_nodrg(args, real_path, logger, folder_path)
 
-    # Attempting to send a push notification to a pushbullet account to notify the
-    # end of the simulation. Needs a pushbullet API key which has to be stored in the
-    # file ./modules/.pbtoken
+    # Attempting to send a push notification to a smartphone using the ntfy service to notify the
+    # end of the simulation. Needs a ntfy topic name which has to be stored in the file ./modules/.pbtoken
     if args.notif:
         try:
-            with open(f"{real_path}/modules/.pbtoken", "r") as f:
-                pb_token = f.readline().strip()
+            with open(f"{real_path}/modules/.ntfy_topic", "r") as f:
+                topic_name = f.readline().strip()
 
-            notification_body = f"Total time: \n{time.time()-t0:.1f} s\n\nParameters:"
+            host = gethostname()
+
+            notification_body = (
+                f"Total runtime: \n{time.time()-t0:.1f} s\n\nSimulation parameters:"
+            )
             for arg in vars(args):
                 if arg != "residues" and arg != "proteins":
                     notification_body += f"\n{arg}: {args.__dict__[arg]}".replace(
@@ -804,10 +808,11 @@ if __name__ == "__main__":
                     ).replace("]", "")
 
             ut.send_notif(
-                title="Simulation Complete",
+                title=f"Simulation complete in {host}",
                 body=notification_body,
-                pb_token=pb_token,
+                topic_name=topic_name,
+                folder_path=folder_path,
             )
 
         except FileNotFoundError:
-            logger.info("'.pbtoken' not found. Ommiting push notification.")
+            logger.info("'.ntfy_topic' not found. Ommiting push notification.")
