@@ -169,9 +169,9 @@ The available arguments are:
                         value (in A) between the small molecules and the protein to check for collision.
 
 - Output options:
-  - `-v` or `--verbose`: Increase output verbosity
-  - `-q` or `--quiet`: Decrease output verbosity
-  - `--notif` or `--notify`: Allows to send a push notification to a smartphone using the ntfy.sh open source service. The ntfy app must be downloaded on the target smartphone, a ntfy topic must be created and its name placed in the `modules/.ntfy_topic` file in the [modules](./modules/) folder of the program.
+    - `-v` or `--verbose`: Increase output verbosity
+    - `-q` or `--quiet`: Decrease output verbosity
+    - `--notif` or `--notify`: Allows to send a push notification to a smartphone using the [ntfy.sh](https://ntfy.sh/) open source service. The ntfy app must be downloaded on the target smartphone, a ntfy topic must be created and its name placed in the `modules/.ntfy_topic` file in the [modules](./modules/) folder of the program.
 
 - Simulation time selection:
   - `--nsteps [NSTEPS]` or `--steps [NSTEPS]` or `-n [NSTEPS]`: Number of timesteps to run the simulation.
