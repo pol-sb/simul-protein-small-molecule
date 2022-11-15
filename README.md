@@ -8,7 +8,6 @@
 - [Getting Started](#getting_started)
 - [Usage](#usage)
 - [Results](#results)
-- [Contributing](../CONTRIBUTING.md)
 
 ## About <a name = "about"></a>
 
@@ -185,13 +184,31 @@ The available arguments are:
   - `--extend_thermostat TEMP NSTEPS` or `--ethermo TEMP NSTEPS` or `--et TEMP NSTEPS`: If present, after finishing the main dynamics, modify the thermostat temperature and run the simulation for a given number of steps.
   `extend_thermostat` takes two arguments: the first is the new temperature and the second is the number of steps to run the simulation.
 
-The `check_version` subcommand can be run like here: 
+### Tests subcommand
+The tests subcommand contains several options to run tests which compute several IDP properties.
+Information about test types and descriptions can be obtained by running:
+
+```bash
+idp-simul tests --help
+```
+The main available test types are:
+
+- `--minimize`/`--dynmin`/`--montecarlo`/`--dynamic-minimize`: This command allows to run MD simulations iteratively with the goal of reducing a given reaction coordinate of an IDP system..
+- `--cont-nodrg`/`--nodrg`/`--contnodrg`/`--continue-nodrg`: This command allows to resume a simulation removing any small
+                        molecules added previously.
+
+
+### Database subcommand
+:warning: :construction: This section is still work in progress. :construction: :warning: 
+
+
+### Check version subcommand
+
+The `check_version` subcommand can be run like shown below in order to check for updates in the github repository.
 
 ```bash
 idp-simul check_version
 ```
-
-in order to check for updates in the github repository.
 
 ## Results <a name = "results"></a>
 
