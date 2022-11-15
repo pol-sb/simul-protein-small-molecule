@@ -812,7 +812,9 @@ if __name__ == "__main__":
                 body=notification_body,
                 topic_name=topic_name,
                 folder_path=folder_path,
+                logger=logger,
             )
 
         except FileNotFoundError:
-            logger.info("'.ntfy_topic' not found. Ommiting push notification.")
+            logger.warn("'.ntfy_topic' not found. Ommiting push notification.")
+
