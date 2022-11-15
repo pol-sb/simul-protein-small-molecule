@@ -852,7 +852,7 @@ def write_params(
         f.write(f"HASH\t{hash_str}\n")
 
 
-def send_notif(title, body, topic_name, folder_path):
+def send_notif(title, body, topic_name, folder_path, logger):
     """
     Send push notifications to a smartphone using the open source ntfy.sh service.
     The ntfy app should be installed in the target smartphone, and a topic must be
@@ -873,26 +873,28 @@ def send_notif(title, body, topic_name, folder_path):
     else:
         image_path = ""
 
-    requests.post(
-        f"https://ntfy.sh/{topic_name}",
-        data=body,
-        headers={
-            "Title": title,
-            "Tags": "white_check_mark,atom_symbol",
-        },
-    )
-
-    if image_path:
+    try:
         requests.post(
             f"https://ntfy.sh/{topic_name}",
-            data=open(image_path, "rb"),
+            data=body,
             headers={
                 "Title": title,
                 "Tags": "white_check_mark,atom_symbol",
-                "Filename": img_name,
             },
         )
 
+        if image_path:
+            requests.post(
+                f"https://ntfy.sh/{topic_name}",
+                data=open(image_path, "rb"),
+                headers={
+                    "Title": title,
+                    "Tags": "white_check_mark,atom_symbol",
+                    "Filename": img_name,
+                },
+            )
+    except requests.exceptions.ConnectionError:
+        logger.critical("Failed to establish a new connection with the notification server. Stopping.")
 
 def timesteps_to_ns(timesteps):
 
@@ -904,9 +906,19 @@ def timesteps_to_ns(timesteps):
 
     return tstep_res
 
+class GPUError(Exception):
+    def __init__(self) -> None:
+        pass
+
+    def __str__(self):
+        return "Unable to find a suitable CUDA-compatible GPU."
+
 
 def get_gpus():
-    gpu_list = sb.check_output(["nvidia-smi", "-L"]).decode("utf-8").strip()
+    try:
+        gpu_list = sb.check_output(["nvidia-smi", "-L"]).decode("utf-8").strip()
+    except FileNotFoundError:
+        raise GPUError()
     return gpu_list
 
 
