@@ -125,7 +125,7 @@ def setup_montecarlo(args, real_path, logger, folder):
     )
 
     # Attempting to create directories in which to save the topology
-    ut.create_dirs(args)
+    # ut.create_dirs(args)
 
     if args.resume:
 

@@ -628,7 +628,6 @@ def create_dirs(args):
     Args:
         args (argparse.Namespace): argparse.Namespace containing all of the launch arguments for the program.
     """
-    print("!!!! CREATE DIRS CALLED")
     folder_date = time.strftime("%Y%m%d_%H%M%S")
 
     if args.subparser_name == "simulate":
@@ -654,11 +653,8 @@ def create_dirs(args):
     return folder_path, prefix
 
 
-def custom_logger(args):
-    # Attempting to create directories in which to save the topology
-    print("logger")
-    folder_path, prefix = create_dirs(args)
-
+def custom_logger(args, folder_path):
+    
     # fmt_str = "\n%(asctime)s - %(levelname)s:\n\t %(message)s"
     # logname = f"./{args.name[0]}/{int(args.temp[0])}/idp-simul_logger.log"
     logname = f"{folder_path}/idp-simul_logger.log"

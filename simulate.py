@@ -363,10 +363,6 @@ def simulate(args, folder_path):
         [90, 90, 90],
     )
 
-    # Attempting to create directories in which to save the topology
-    # folder_path, prefix = ut.create_dirs(args)
-    print(folder_path)
-
     # Checking if there is a checkpoint file
     try:
         check_point = folder_path + f"/{name}_{temp}_{sm_mol[0]}_restart.chk"
@@ -732,11 +728,13 @@ if __name__ == "__main__":
     # Getting the main script path
     real_path = os.path.split(os.path.realpath(__file__))[0]
 
+    folder_path, prefix = ut.create_dirs(args)
+
     # Using the 'simulate' subcommand
     if args.subparser_name == "simulate":
 
         # Custom logger for easier debugging, using the python logging module.
-        logger, verbosity, folder_path = ut.custom_logger(args)
+        logger, verbosity, folder_path = ut.custom_logger(args, folder_path)
 
         residues = pd.read_csv(f"{real_path}/data/residues.csv").set_index(
             "three", drop=False
@@ -779,7 +777,7 @@ if __name__ == "__main__":
         t0 = time.time()
 
         # Custom logger for easier debugging, using the python logging module.
-        logger, verbosity, folder_path = ut.custom_logger(args)
+        logger, verbosity, folder_path = ut.custom_logger(args, folder_path)
 
         vars(args)["verbosity"] = verbosity
 
@@ -817,4 +815,3 @@ if __name__ == "__main__":
 
         except FileNotFoundError:
             logger.warn("'.ntfy_topic' not found. Ommiting push notification.")
-
