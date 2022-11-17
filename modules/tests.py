@@ -8,6 +8,7 @@ import pandas as pd
 import scipy as sci
 from openmm import XmlSerializer, app
 
+import modules.sasa_cg as scg
 import modules.small_molecule as smol
 import modules.utils as ut
 import simulate as sim
@@ -15,7 +16,8 @@ from modules.analyse import *
 
 
 def minimize_montecarlo(args, real_path, logger, folder):
-    """This function checks which reaction coordinate is specified
+    """
+    This function checks which reaction coordinate is specified
     at launch in the program arguments and runs the appropiate
     function to minimize it.
 
@@ -36,6 +38,8 @@ def minimize_montecarlo(args, real_path, logger, folder):
         minimize_potential_en(args, real_path, logger, folder)
     elif args.dispersion:
         minimize_dispersion(args, real_path, logger, folder)
+    elif args.sasa:
+        minimize_sasa(args, real_path, logger, folder)
     else:
         raise NotImplementedError()
 
@@ -99,8 +103,6 @@ def setup_montecarlo(args, real_path, logger, folder):
 
     residues = residues.set_index("one")
 
-    # folder = "test_mc_minimize_" + name + f"/{temp}/"
-
     # Generates the parameters for the LJ interaction º
     lj_eps, fasta, types, MWs = genParamsLJ(residues, name, prot)
 
@@ -123,9 +125,6 @@ def setup_montecarlo(args, real_path, logger, folder):
         [L, L, Lz],
         [90, 90, 90],
     )
-
-    # Attempting to create directories in which to save the topology
-    # ut.create_dirs(args)
 
     if args.resume:
 
@@ -322,21 +321,22 @@ def setup_montecarlo(args, real_path, logger, folder):
         simulation.loadCheckpoint(check_point)
         logger.info("Checkpoint loaded!")
 
-        try:
-            simulation.reporters.append(
-                app.dcdreporter.DCDReporter(
-                    f"{folder}/{name}_{temp}_{sm_mol[0]}_report_continue.dcd",
-                    dcd_save_interval,
-                    append=False,
-                )
-            )
-        except TypeError:
-            simulation.reporters.append(
-                app.dcdreporter.DCDReporter(
-                    f"{folder}/{name}_{temp}_NODRG_report_continue.dcd",
-                    dcd_save_interval,
-                )
-            )
+        # try:
+        #     simulation.reporters.append(
+        #         app.dcdreporter.DCDReporter(
+        #             f"{folder}/{name}_{temp}_{sm_mol[0]}_report_continue.dcd",
+        #             dcd_save_interval,
+        #             append=False,
+        #         )
+        #     )
+        # except TypeError:
+        #     simulation.reporters.append(
+        #         app.dcdreporter.DCDReporter(
+        #             f"{folder}/{name}_{temp}_NODRG_report_continue.dcd",
+        #             dcd_save_interval,
+        #         )
+        #     )
+
     else:
         # Saving simulation parameters into a 'parameter.dat' file to facilitate
         # data analysis and results parsing later
@@ -594,7 +594,7 @@ def minimize_dispersion(args, real_path, logger, folder):
     logger.info("Minimizing particle dispersion.")
 
     # Initializing result storage variables
-    energy_list = []
+    disp_list = []
     coord_arr = []
     save_count = 0
 
@@ -607,7 +607,7 @@ def minimize_dispersion(args, real_path, logger, folder):
         in_disp = compute_dispersion(simulation, topology)
 
         # Adding initial dispersion to a list.
-        energy_list.append(in_disp)
+        disp_list.append(in_disp)
 
         print("")
         logger.info(f".:: MC minimization step: {run_ind+1}/{args.runs[0]} ::.")
@@ -649,7 +649,7 @@ def minimize_dispersion(args, real_path, logger, folder):
 
     print("")
 
-    energ_array = np.array([range(args.runs[0]), energy_list]).T
+    disp_array = np.array([range(args.runs[0]), disp_list]).T
 
     logger.info("Minimization done.")
     logger.info(f"Total dispersion variation = {abs(in_disp - first_disp)} nm")
@@ -661,7 +661,7 @@ def minimize_dispersion(args, real_path, logger, folder):
     logger.info(f"Dispersion values stored in '{res_filename}'.")
     np.savetxt(
         res_filename,
-        energ_array,
+        disp_array,
         header=f"{args.runs[0]} {sim_time}",
     )
 
@@ -684,10 +684,199 @@ def minimize_dispersion(args, real_path, logger, folder):
     )
 
     # Plotting energy variation
-    plt.plot(energ_array[1:, 0], energ_array[1:, 1])
+    plt.plot(disp_array[1:, 0], disp_array[1:, 1])
     plt.xlabel("Iteration")
     plt.ylabel("Particle Dispersion (nm)")
     plt.savefig(f"{folder}/res_mc_disp_plot.png", dpi=200)
+
+
+def compute_sasa(args, top, sim, logger, r_path, scale=2):
+    """
+    This function computes the SASA for the system, ignoring the small
+    molecule (if any) added.
+    Scale is set to 2 as it seems to be a good option to differenciate between
+    dilute and condensed phase.
+
+    Parameters
+    ----------
+        simulation (openmm.app.simulation.Simulation): OpenMM Simulation object
+        top (openmm.app.topology.Topology): OpenMM Topology object
+        scale (int, optional): Scale of the SASA calculation. Defaults to 2.
+
+    Returns
+    -------
+        numpy.double: SASA value in nm**2.
+    """
+
+    # pdb_list=('../../Downloads/green.pdb', '../../Downloads/orange.pdb')
+    # t = md.load(pdb_name)
+
+    # removing small molecules from our target system
+    if args.small_molec:
+
+        coord = sim.context.getState(getPositions=True).getPositions(asNumpy=True)
+        model = app.modeller.Modeller(top, coord)
+
+        last_chain = [ch for ch in top.chains() if (ch.index + 1) == top.getNumChains()]
+
+        model.delete(last_chain)
+        top2 = model.getTopology()
+        coord_arr = model.getPositions()
+
+        pbc_arr, pbc_angles = ut.gen_pbc_params(sim.context.getSystem(), 1)
+
+        res_traj = md.Trajectory(
+            xyz=coord_arr,
+            topology=top2,
+            unitcell_lengths=np.array(pbc_arr),
+            unitcell_angles=pbc_angles,
+        )
+    else:
+        raise NotImplementedError()
+
+    residues = pd.read_csv(f"{r_path}/data/residues.csv", index_col="one")
+
+    # Choosing a mean value for X, Z and DRG.
+    # This should not have a significant impact on the results.
+    residues.loc["X", "sigmas"] = residues["sigmas"].mean()
+    residues.loc["Z", "sigmas"] = residues["sigmas"].mean()
+    residues.loc["DRG", "sigmas"] = residues["sigmas"].mean()
+
+    # Computing SASA using the Shrake-Rupley algorithm.
+    resi_radii = (scale * residues["sigmas"]).to_dict()
+    res_sasa = scg.shrake_rupley(res_traj, change_radii=resi_radii).sum()
+
+    return res_sasa
+
+
+def minimize_sasa(args, real_path, logger, folder):
+    """
+    This function attempts to reduce the solvent-accessible surface area (SASA) of the IDP
+    by performing short MD simulations and comparing the final dispersion obtained with the
+    initial one. If the new value is smaller, the final state of the simulation is kept as the
+    system's current state, otherwise the trajectory is discarded and computed again.
+
+    Args:
+        args (argparse.Namespace): Namespace containing the user input arguments.
+    """
+
+    (
+        simulation,
+        system,
+        topology,
+        sim_time,
+        time_units,
+        sim_time_ns,
+    ) = setup_montecarlo(args, real_path, logger, folder)
+
+    print("")
+    logger.info("Minimizing SASA.")
+    if args.small_molec:
+        logger.info("Omitting small molecules in SASA calculations.")
+    else:
+        raise NotImplementedError()
+
+    # Initializing result storage variables
+    sasa_list = []
+    coord_arr = []
+    save_count = 0
+
+    # Storing initial SASA.
+    first_disp = compute_sasa(
+        args=args, top=topology, logger=logger, sim=simulation, r_path=real_path
+    )
+
+    for run_ind in range(args.runs[0]):
+
+        # Computing SASA (in nm**2).
+        in_disp = compute_sasa(
+            args=args, top=topology, logger=logger, sim=simulation, r_path=real_path
+        )
+
+        # Adding initial SASA to a list.
+        sasa_list.append(in_disp)
+
+        print("")
+        logger.info(f".:: MC minimization step: {run_ind+1}/{args.runs[0]} ::.")
+
+        logger.info(
+            f"Running simulation for {sim_time} {time_units} ({sim_time_ns} ns)."
+        )
+
+        # Running the simulations for the given timesteps.
+        simulation.step(sim_time)
+
+        # Computing current run's SASA (in nm**2).
+        run_disp = compute_sasa(
+            args=args, top=topology, logger=logger, sim=simulation, r_path=real_path
+        )
+
+        # Checking dispersion distance difference.
+        if run_disp < in_disp:
+            logger.info(f"Current SASA: {in_disp} nm**2")
+            logger.info(f"Run SASA: {run_disp} nm**2")
+            logger.info(f"SASA difference: {run_disp-in_disp} nm**2")
+            logger.info("[!] Run decreased SASA.")
+            simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
+
+            save_count += 1
+            positions = (
+                simulation.context.getState(getPositions=True).getPositions(
+                    asNumpy=True
+                )
+                / unit.nanometer
+            )
+            coord_arr.append(positions)
+
+            in_disp = run_disp
+
+        else:
+            logger.info(f"Current SASA: {in_disp} nm**2")
+            logger.info(f"Run SASA: {run_disp} nm**2")
+            logger.info(f"SASA unchanged.")
+            simulation.loadState(f"{folder}/res_mc_minimization_state.xml")
+
+    print("")
+
+    sasa_array = np.array([range(args.runs[0]), sasa_list]).T
+
+    logger.info("Minimization done.")
+    logger.info(f"Total SASA variation = {abs(in_disp - first_disp)} nm**2")
+
+    print("")
+
+    res_filename = f"{folder}/res_mc_minimization_dispersion.log"
+
+    logger.info(f"SASA values stored in '{res_filename}'.")
+    np.savetxt(
+        res_filename,
+        sasa_array,
+        header=f"{args.runs[0]} {sim_time}",
+    )
+
+    # Saving final system positions.
+    positions = simulation.context.getState(getPositions=True).getPositions()
+    app.PDBFile.writeFile(
+        simulation.topology,
+        positions,
+        open(f"{folder}/res_mc_finalsystem.pdb", "w"),
+    )
+
+    # Saving trajectory
+    ut.save_minimize_coordinates_dcd(
+        folder=folder,
+        args=args,
+        coord_arr=coord_arr,
+        save_count=save_count,
+        system=system,
+        simulation=simulation,
+    )
+
+    # Plotting SASA variation.
+    plt.plot(sasa_array[1:, 0], sasa_array[1:, 1])
+    plt.xlabel("Iteration")
+    plt.ylabel("SASA (nm**2)")
+    plt.savefig(f"{folder}/res_mc_SASA_plot.png", dpi=200)
 
 
 def resume_nodrg(args, real_path, logger, folder):

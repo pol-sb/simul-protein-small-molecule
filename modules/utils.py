@@ -595,6 +595,13 @@ def arg_parse():
         help="If this argument is passed, the program will minimize the particle dispersion.",
     )
 
+    minim_excl_group.add_argument(
+        "--sasa",
+        "--SASA",
+        action="store_true",
+        help="If this argument is passed, the program will minimize the IDP SASA.",
+    )
+
     subp5 = add_simulargs_to_parser(subp_montecarlo)
 
     g0 = subp_montecarlo.add_argument_group(title="Minimization parameters")
@@ -654,7 +661,7 @@ def create_dirs(args):
 
 
 def custom_logger(args, folder_path):
-    
+
     # fmt_str = "\n%(asctime)s - %(levelname)s:\n\t %(message)s"
     # logname = f"./{args.name[0]}/{int(args.temp[0])}/idp-simul_logger.log"
     logname = f"{folder_path}/idp-simul_logger.log"
@@ -829,6 +836,19 @@ def save_minimize_coordinates_dcd(
     # Writing final coordinates into a DCD trajectory file
     coord_arr = np.array(coord_arr)
 
+    pbc_arr, pbc_angles = gen_pbc_params(system, save_count)
+
+    final_traj = md.Trajectory(
+        xyz=coord_arr,
+        topology=simulation.topology,
+        unitcell_lengths=np.array(pbc_arr),
+        unitcell_angles=pbc_angles,
+    )
+
+    final_traj.save_dcd(dcd_filename)
+
+
+def gen_pbc_params(system, save_count):
     # Preparing pbc vectors and angles for each frame
     # This should be constant in our simulations.
     pbc_vec = system.getDefaultPeriodicBoxVectors()
@@ -843,13 +863,7 @@ def save_minimize_coordinates_dcd(
 
     pbc_angles = np.array([90, 90, 90] * save_count).reshape(save_count, 3)
 
-    final_traj = md.Trajectory(
-        xyz=coord_arr,
-        topology=simulation.topology,
-        unitcell_lengths=np.array(pbc_arr),
-        unitcell_angles=pbc_angles,
-    )
-    final_traj.save_dcd(dcd_filename)
+    return pbc_arr, pbc_angles
 
 
 def write_params(
