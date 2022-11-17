@@ -6,11 +6,11 @@ import openmm
 import openmm.unit as unit
 import pandas as pd
 import scipy as sci
-import simulate as sim
 from openmm import XmlSerializer, app
 
 import modules.small_molecule as smol
 import modules.utils as ut
+import simulate as sim
 from modules.analyse import *
 
 
@@ -228,8 +228,6 @@ def setup_montecarlo(args, real_path, logger, folder):
         pdb = app.pdbfile.PDBFile(chk_path + "/sm_drg_traj.pdb")
         top = pdb.getTopology()
 
-        # logger.info(f"in_traj top: {in_traj.topology}")
-
         xml_path = [f for f in os.listdir(chk_path) if f.endswith(".xml")][0]
 
         with open(chk_path + "/" + xml_path, "r") as f:
@@ -370,22 +368,6 @@ def setup_montecarlo(args, real_path, logger, folder):
                 f" {simulation.context.getState(getEnergy=True).getPotentialEnergy()}"
             )
 
-        try:
-            simulation.reporters.append(
-                app.dcdreporter.DCDReporter(
-                    folder + f"/{name}_{temp}_{sm_mol[0]}_report.dcd",
-                    sim_time,
-                )
-            )
-
-        except TypeError:
-            simulation.reporters.append(
-                app.dcdreporter.DCDReporter(
-                    folder + f"/{name}_{temp}_NODRG_report.dcd",
-                    sim_time,
-                )
-            )
-
     # Checks if there is an existing .log file in order to select the .log file
     # writing mode
     if os.path.isfile(check_point):
@@ -447,8 +429,12 @@ def minimize_potential_en(args, real_path, logger, folder):
 
     logger.info("Minimizing potential energy.")
 
+    # Initializing result storage variables
     energy_list = []
+    coord_arr = []
+    save_count = 0
 
+    # Computing potential energy for the first iteration.
     first_energ = simulation.context.getState(getEnergy=True).getPotentialEnergy()
 
     for run_ind in range(args.runs[0]):
@@ -475,6 +461,16 @@ def minimize_potential_en(args, real_path, logger, folder):
             logger.info(f"Energy difference: {run_pot_energ-in_pot_energ}")
             logger.info("[!] Run minimized energy.")
             simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
+
+            save_count += 1
+            positions = (
+                simulation.context.getState(getPositions=True).getPositions(
+                    asNumpy=True
+                )
+                / unit.nanometer
+            )
+            coord_arr.append(positions)
+
             in_pot_energ = run_pot_energ
 
         else:
@@ -501,12 +497,22 @@ def minimize_potential_en(args, real_path, logger, folder):
         header=f"{args.runs[0]} {sim_time}",
     )
 
-    # Saving final system position.
+    # Saving final system positions.
     positions = simulation.context.getState(getPositions=True).getPositions()
     app.PDBFile.writeFile(
         simulation.topology,
         positions,
         open(f"{folder}/res_mc_finalsystem.pdb", "w"),
+    )
+
+    # Saving trajectory
+    ut.save_minimize_coordinates_dcd(
+        folder=folder,
+        args=args,
+        coord_arr=coord_arr,
+        save_count=save_count,
+        system=system,
+        simulation=simulation,
     )
 
     # Plotting energy variation
@@ -587,7 +593,10 @@ def minimize_dispersion(args, real_path, logger, folder):
 
     logger.info("Minimizing particle dispersion.")
 
+    # Initializing result storage variables
     energy_list = []
+    coord_arr = []
+    save_count = 0
 
     # Storing initial dispersion.
     first_disp = compute_dispersion(simulation, topology)
@@ -620,6 +629,16 @@ def minimize_dispersion(args, real_path, logger, folder):
             logger.info(f"Dispersion difference: {run_disp-in_disp} nm")
             logger.info("[!] Run decreased dispersion.")
             simulation.saveState(f"{folder}/res_mc_minimization_state.xml")
+
+            save_count += 1
+            positions = (
+                simulation.context.getState(getPositions=True).getPositions(
+                    asNumpy=True
+                )
+                / unit.nanometer
+            )
+            coord_arr.append(positions)
+
             in_disp = run_disp
 
         else:
@@ -646,12 +665,22 @@ def minimize_dispersion(args, real_path, logger, folder):
         header=f"{args.runs[0]} {sim_time}",
     )
 
-    # Saving final system position.
+    # Saving final system positions.
     positions = simulation.context.getState(getPositions=True).getPositions()
     app.PDBFile.writeFile(
         simulation.topology,
         positions,
         open(f"{folder}/res_mc_finalsystem.pdb", "w"),
+    )
+
+    # Saving trajectory
+    ut.save_minimize_coordinates_dcd(
+        folder=folder,
+        args=args,
+        coord_arr=coord_arr,
+        save_count=save_count,
+        system=system,
+        simulation=simulation,
     )
 
     # Plotting energy variation

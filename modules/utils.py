@@ -5,10 +5,11 @@ import subprocess as sb
 import sys
 import time
 
+import mdtraj as md
 import numpy as np
+import openmm.unit as unit
 import pandas as pd
 import requests
-
 
 LOGO = (
     " _     _                 _                 _ \n"
@@ -627,7 +628,7 @@ def create_dirs(args):
     Args:
         args (argparse.Namespace): argparse.Namespace containing all of the launch arguments for the program.
     """
-
+    print("!!!! CREATE DIRS CALLED")
     folder_date = time.strftime("%Y%m%d_%H%M%S")
 
     if args.subparser_name == "simulate":
@@ -655,6 +656,7 @@ def create_dirs(args):
 
 def custom_logger(args):
     # Attempting to create directories in which to save the topology
+    print("logger")
     folder_path, prefix = create_dirs(args)
 
     # fmt_str = "\n%(asctime)s - %(levelname)s:\n\t %(message)s"
@@ -818,6 +820,42 @@ def create_hash(params):
     return hash_str
 
 
+def save_minimize_coordinates_dcd(
+    folder, args, coord_arr, save_count, system, simulation
+):
+    # Preparing filename for the coordinate file.
+    dcd_filename = (
+        f"{folder}/{args.name}_{args.temp}_{args.small_molec[0]}_report_continue.dcd"
+    )
+    for char in ["[", "'", "\\", "]"]:
+        dcd_filename = dcd_filename.replace(char, "")
+
+    # Writing final coordinates into a DCD trajectory file
+    coord_arr = np.array(coord_arr)
+
+    # Preparing pbc vectors and angles for each frame
+    # This should be constant in our simulations.
+    pbc_vec = system.getDefaultPeriodicBoxVectors()
+    pbc_arr = np.array(
+        [
+            pbc_vec[0][0] / unit.nanometer,
+            pbc_vec[1][1] / unit.nanometer,
+            pbc_vec[2][2] / unit.nanometer,
+        ]
+        * save_count
+    ).reshape(save_count, 3)
+
+    pbc_angles = np.array([90, 90, 90] * save_count).reshape(save_count, 3)
+
+    final_traj = md.Trajectory(
+        xyz=coord_arr,
+        topology=simulation.topology,
+        unitcell_lengths=np.array(pbc_arr),
+        unitcell_angles=pbc_angles,
+    )
+    final_traj.save_dcd(dcd_filename)
+
+
 def write_params(
     path: str,
     args,
@@ -894,7 +932,10 @@ def send_notif(title, body, topic_name, folder_path, logger):
                 },
             )
     except requests.exceptions.ConnectionError:
-        logger.critical("Failed to establish a new connection with the notification server. Stopping.")
+        logger.critical(
+            "Failed to establish a new connection with the notification server. Stopping."
+        )
+
 
 def timesteps_to_ns(timesteps):
 
@@ -905,6 +946,7 @@ def timesteps_to_ns(timesteps):
     tstep_res /= 1000
 
     return tstep_res
+
 
 class GPUError(Exception):
     def __init__(self) -> None:
