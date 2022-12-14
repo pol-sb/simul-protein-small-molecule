@@ -3,7 +3,7 @@ astunparse==1.6.3
 backcall==0.2.0
 biopython==1.79
 black==22.1.0
-certifi==2022.5.18.1
+certifi==2022.12.7
 charset-normalizer==2.0.12
 click==8.0.3
 commonmark==0.9.1
@@ -43,7 +43,7 @@ parso==0.8.3
 pathspec==0.9.0
 pexpect==4.8.0
 pickleshare==0.7.5
-Pillow==9.0.1
+Pillow==9.3.0
 pkg_resources==0.0.0
 platformdirs==2.5.0
 prompt-toolkit==2.0.4
