@@ -2,6 +2,8 @@
 
 ![Simulation example](./docs/slab.png)
 
+[![DOI](https://zenodo.org/badge/462746093.svg)](https://zenodo.org/badge/latestdoi/462746093)
+
 ## Table of Contents
 
 - [About](#about)
