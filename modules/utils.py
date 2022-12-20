@@ -242,6 +242,7 @@ def add_simulargs_to_subparser(subparser):
 
     g4.add_argument(
         "--notif",
+        "--notify",
         help="Send PB notification",
         action="store_true",
     )
