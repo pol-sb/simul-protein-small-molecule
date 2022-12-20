@@ -887,6 +887,8 @@ def resume_nodrg(args, real_path, logger, folder):
     # Checking if there is a checkpoint file
     chk_path, chk_file = ut.find_checkpoint()
 
+    # Check if the checkpoint exists in the path
+    # variable.
     if chk_path != "":
         logger.info(f"Checkpoint file found in '{chk_path}.'")
 
