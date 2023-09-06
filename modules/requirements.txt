@@ -3,7 +3,7 @@ astunparse==1.6.3
 backcall==0.2.0
 biopython==1.79
 black==22.1.0
-certifi==2022.12.7
+certifi==2023.7.22
 charset-normalizer==2.0.12
 click==8.0.3
 commonmark==0.9.1
