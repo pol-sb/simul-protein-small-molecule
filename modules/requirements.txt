@@ -58,7 +58,7 @@ pytz==2021.3
 pyzmq==23.1.0
 requests==2.31.0
 rich==12.3.0
-scipy==1.8.0
+scipy==1.10.0
 six==1.16.0
 stack-data==0.2.0
 threadpoolctl==3.1.0
