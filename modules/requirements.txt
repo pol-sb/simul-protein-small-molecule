@@ -16,7 +16,7 @@ executing==0.8.3
 fonttools==4.60.2
 GridDataFormats==0.6.0
 gsd==2.5.1
-idna==3.3
+idna==3.7
 ipykernel==6.14.0
 ipython==8.10.0
 jedi==0.18.1
